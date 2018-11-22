@@ -277,11 +277,12 @@ converse.plugins.add('converse-muc-views', {
             initialize () {
                 _converse.BootstrapModal.prototype.initialize.apply(this, arguments);
                 this.model.on('change:muc_domain', this.onDomainChange, this);
+                this.showRooms();
             },
 
             toHTML () {
                 return tpl_list_chatrooms_modal(_.extend(this.model.toJSON(), {
-                    'heading_list_chatrooms': __('Query for Groupchats'),
+                    'heading_list_chatrooms': __('Group Chat'),
                     'label_server_address': __('Server address'),
                     'label_query': __('Show groupchats'),
                     'server_placeholder': __('conference.example.org')
@@ -378,9 +379,12 @@ converse.plugins.add('converse-muc-views', {
             },
 
             showRooms (ev) {
-                ev.preventDefault();
-                const data = new FormData(ev.target);
-                this.model.save('muc_domain', Strophe.getDomainFromJid(data.get('server')));
+                if(ev) {
+                    ev.preventDefault();
+                }
+                // const data = new FormData(ev.target);
+                let server = document.getElementsByName('server')[0].value;
+                this.model.save('muc_domain', Strophe.getDomainFromJid(server));
                 this.updateRoomsList();
             },
 
@@ -403,10 +407,10 @@ converse.plugins.add('converse-muc-views', {
             toHTML () {
                 return tpl_add_chatroom_modal(_.extend(this.model.toJSON(), {
                     'heading_new_chatroom': __('Enter a new Groupchat'),
-                    'label_room_address': __('Groupchat address'),
+                    'label_room_address': __('Groupchat name'),
                     'label_nickname': __('Optional nickname'),
-                    'chatroom_placeholder': __('name@conference.example.org'),
-                    'label_join': __('Join'),
+                    'chatroom_placeholder': __('Name'),
+                    'label_join': __('Create'),
                 }));
             },
 
@@ -419,7 +423,7 @@ converse.plugins.add('converse-muc-views', {
             parseRoomDataFromEvent (form) {
                 const data = new FormData(form);
                 const jid = data.get('chatroom');
-                this.model.save('muc_domain', Strophe.getDomainFromJid(jid));
+                // this.model.save('muc_domain', Strophe.getDomainFromJid(jid));
                 return {
                     'jid': jid,
                     'nick': data.get('nickname')
@@ -433,7 +437,9 @@ converse.plugins.add('converse-muc-views', {
                     // Make sure defaults apply if no nick is provided.
                     data.nick = undefined;
                 }
-                _converse.api.rooms.open(data.jid, data);
+                let newRoomAddress = data.jid + '@' + this.model.get('muc_domain');
+                data.jid = newRoomAddress;
+                _converse.api.rooms.open(newRoomAddress, data);
                 this.modal.hide();
                 ev.target.reset();
             }
@@ -1777,9 +1783,9 @@ converse.plugins.add('converse-muc-views', {
             },
 
             showListRoomsModal(ev) {
-                if (_.isUndefined(this.list_rooms_modal)) {
+                // if (_.isUndefined(this.list_rooms_modal)) {
                     this.list_rooms_modal = new _converse.ListChatRoomsModal({'model': this.model});
-                }
+                // }
                 this.list_rooms_modal.show(ev);
             }
         });
@@ -1942,7 +1948,7 @@ converse.plugins.add('converse-muc-views', {
                 const reason = prompt(
                     __('You are about to invite %1$s to the groupchat "%2$s". '+
                        'You may optionally include a message, explaining the reason for the invitation.',
-                       suggestion.text.label, this.model.get('id'))
+                       suggestion.text.label, this.model.chatroom.get('name'))
                 );
                 if (reason !== null) {
                     this.chatroomview.model.directInvite(suggestion.text.value, reason);

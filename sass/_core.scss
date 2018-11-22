@@ -10,6 +10,10 @@ body.reset {
     margin: 0;
 }
 
+.invisible-block {
+    display: none;
+}
+
 @font-face {
     font-family: 'Converse-js';
     src: url($font-path + 'icomoon.eot?wvi0ht');
