@@ -242,7 +242,7 @@ converse.plugins.add('converse-rosterview', {
                 return tpl_roster_filter(
                     _.extend(this.model.toJSON(), {
                         visible: this.shouldBeVisible(),
-                        placeholder: __('Filter'),
+                        placeholder: __('Search'),
                         title_contact_filter: __('Filter by contact name'),
                         title_group_filter: __('Filter by group name'),
                         title_status_filter: __('Filter by status'),
