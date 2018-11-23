@@ -409,8 +409,8 @@ converse.plugins.add('converse-muc-views', {
                     'heading_new_chatroom': __('Enter a new Groupchat'),
                     'label_room_address': __('Groupchat name'),
                     'label_nickname': __('Optional nickname'),
-                    'chatroom_placeholder': __('Name'),
-                    'label_join': __('Create'),
+                    'chatroom_placeholder': __('Room Name'),
+                    'label_join': __('Create Room'),
                 }));
             },
 
@@ -437,11 +437,41 @@ converse.plugins.add('converse-muc-views', {
                     // Make sure defaults apply if no nick is provided.
                     data.nick = undefined;
                 }
-                let newRoomAddress = data.jid + '@' + this.model.get('muc_domain');
-                data.jid = newRoomAddress;
-                _converse.api.rooms.open(newRoomAddress, data);
+
+                const iq = $iq({
+                    'to': this.model.get('muc_domain'),
+                    'from': _converse.connection.jid,
+                    'type': "get"
+                }).c("query", {xmlns: Strophe.NS.DISCO_ITEMS});
+                _converse.api.sendIQ(iq)
+                    .then(iq => this.checkRoomFound(iq, data))
+
                 this.modal.hide();
                 ev.target.reset();
+            },
+
+            checkRoomFound (iq, data) {
+                let roomFound = false;
+                let rooms = iq.querySelectorAll('query item');
+                for (let room of rooms) {
+                    let name = room.getAttribute('name');
+                    if (name == data.jid) {
+                        roomFound = true;
+                    }
+                }
+
+                if (roomFound) {
+                    let res = alert(`The room "${data.jid}" already exists, please choose a new name.`);
+                } else {
+                    this.createRoom(data);               
+                }
+                
+            },
+
+            createRoom (data) {
+                let newRoomAddress = data.jid + '@' + this.model.get('muc_domain');
+                data.jid = newRoomAddress;                
+                _converse.api.rooms.open(newRoomAddress, data); 
             }
         });
 
