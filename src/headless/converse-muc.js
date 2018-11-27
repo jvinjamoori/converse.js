@@ -1225,7 +1225,7 @@ converse.plugins.add('converse-muc', {
                 result = true;
             } else {
                 // Invite request might come from someone not your roster list
-                contact = contact? contact.get('fullname'): Strophe.getNodeFromJid(from);
+                contact = contact? contact.get('nickname'): Strophe.getNodeFromJid(from);
                 if (!reason) {
                     result = confirm(
                         __("%1$s has invited you to join a groupchat: %2$s", contact, room_jid)

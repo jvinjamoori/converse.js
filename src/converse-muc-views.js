@@ -406,7 +406,7 @@ converse.plugins.add('converse-muc-views', {
 
             toHTML () {
                 return tpl_add_chatroom_modal(_.extend(this.model.toJSON(), {
-                    'heading_new_chatroom': __('Enter a new Groupchat'),
+                    'heading_new_chatroom': __('Create a new room'),
                     'label_room_address': __('Groupchat name'),
                     'label_nickname': __('Optional nickname'),
                     'chatroom_placeholder': __('Room Name'),
