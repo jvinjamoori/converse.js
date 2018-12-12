@@ -411,6 +411,7 @@ converse.plugins.add('converse-muc-views', {
                     'label_nickname': __('Optional nickname'),
                     'chatroom_placeholder': __('Room Name'),
                     'label_join': __('Create Room'),
+                    'createroom_note': __('Note: The following characters are not allowed in the chat room name space, +, =, *, &, ^, $, #, !, ~, `, ?, :, ;, @, %1$s','%')
                 }));
             },
 
@@ -424,8 +425,10 @@ converse.plugins.add('converse-muc-views', {
                 const data = new FormData(form);
                 const jid = data.get('chatroom');
                 // this.model.save('muc_domain', Strophe.getDomainFromJid(jid));
+                let newJid = jid.replace(/[\s|\+|=|\*|&|\^|%|\$|#|!|~|`|\?|:|;|@]+/gi, "-");
+                
                 return {
-                    'jid': jid,
+                    'jid': newJid,
                     'nick': data.get('nickname')
                 }
             },
