@@ -466,8 +466,15 @@ body.reset {
         border-color: var(--primary-color-dark);
     }
 
-    .btn-primary, .button-primary, .badge-primary {
+    .badge {
+        text-shadow: none;
+    }
+
+    .badge {
         color: white;
+    }
+
+    .btn-primary, .button-primary, .badge-primary {
         background-color: var(--primary-color);
         border-color: transparent;
         &:hover {
@@ -480,8 +487,20 @@ body.reset {
         }
     }
 
+    .badge-groupchat {
+        background-color: var(--chatroom-head-color);
+        border-color: transparent;
+        &:hover {
+            background-color: var(--chatroom-head-color-dark);
+            border-color: transparent;
+        }
+        &.active {
+            background-color: var(--chatroom-head-color-dark) !important;
+            border-color: transparent !important;
+        }
+    }
+
     .btn-info, .badge-info {
-        color: white;
         background-color: var(--primary-color);
         border-color: var(--primary-color);
         &:hover {

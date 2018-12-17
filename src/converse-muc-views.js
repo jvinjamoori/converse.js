@@ -898,11 +898,8 @@ converse.plugins.add('converse-muc-views', {
             },
 
             parseMessageForCommands (text) {
-                if (_converse.ChatBoxView.prototype.parseMessageForCommands.apply(this, arguments)) {
-                    return true;
-                }
                 if (_converse.muc_disable_moderator_commands) {
-                    return false;
+                    return _converse.ChatBoxView.prototype.parseMessageForCommands.apply(this, arguments);
                 }
                 const match = text.replace(/^\s*/, "").match(/^\/(.*?)(?: (.*))?$/) || [false, '', ''],
                       args = match[2] && match[2].splitOnce(' ').filter(s => s) || [],
@@ -954,7 +951,7 @@ converse.plugins.add('converse-muc-views', {
                             `<strong>/nick</strong>: ${__('Change your nickname')}`,
                             `<strong>/op</strong>: ${__('Grant moderator role to user')}`,
                             `<strong>/owner</strong>: ${__('Grant ownership of this groupchat')}`,
-                            `<strong>/register</strong>: ${__("Register a nickname for this room")}`,
+                            `<strong>/register</strong>: ${__("Register a nickname for this groupchat")}`,
                             `<strong>/revoke</strong>: ${__("Revoke user's membership")}`,
                             `<strong>/subject</strong>: ${__('Set groupchat subject')}`,
                             `<strong>/topic</strong>: ${__('Set groupchat subject (alias for /subject)')}`,
@@ -1065,7 +1062,7 @@ converse.plugins.add('converse-muc-views', {
                                 undefined, this.onCommandError.bind(this));
                         break;
                     default:
-                        return false;
+                        return _converse.ChatBoxView.prototype.parseMessageForCommands.apply(this, arguments);
                 }
                 return true;
             },

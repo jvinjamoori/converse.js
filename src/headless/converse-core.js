@@ -69,32 +69,10 @@ const BOSH_WAIT = 59;
  */
 const _converse = {
     'templates': {},
-    'promises': {},
-
-    get connection () {
-        /* Creates a new Strophe.Connection instance if we don't already have one.
-         */
-        if (!this._connection) {
-            if (!this.bosh_service_url && ! this.websocket_url) {
-                throw new Error("connection: you must supply a value for either the bosh_service_url or websocket_url or both.");
-            }
-            if (('WebSocket' in window || 'MozWebSocket' in window) && this.websocket_url) {
-                this._connection = new Strophe.Connection(this.websocket_url, this.connection_options);
-            } else if (this.bosh_service_url) {
-                this._connection = new Strophe.Connection(
-                    this.bosh_service_url,
-                    _.assignIn(this.connection_options, {'keepalive': this.keepalive})
-                );
-            } else {
-                throw new Error("connection: this browser does not support websockets and bosh_service_url wasn't specified.");
-            }
-            _converse.emit('connectionInitialized');
-        }
-        return this._connection;
-    }
+    'promises': {}
 }
 
-_converse.VERSION_NAME = "v4.0.5";
+ _converse.VERSION_NAME = "v4.0.6";
 
 _.extend(_converse, Backbone.Events);
 
@@ -334,7 +312,12 @@ _converse.emit = function (name) {
     }
 };
 
-_converse.isSingleton = function () {
+_converse.isUniView = function () {
+    /* We distinguish between UniView and MultiView instances.
+     *
+     * UniView means that only one chat is visible, even though there might be multiple ongoing chats.
+     * MultiView means that multiple chats may be visible simultaneously.
+     */
     return _.includes(['mobile', 'fullscreen', 'embedded'], _converse.view_mode);
 }
 
@@ -395,6 +378,27 @@ function initClientConfig () {
     _converse.emit('clientConfigInitialized');
 }
 
+_converse.initConnection = function () {
+    /* Creates a new Strophe.Connection instance if we don't already have one.
+     */
+    if (!_converse.connection) {
+        if (!_converse.bosh_service_url && ! _converse.websocket_url) {
+            throw new Error("initConnection: you must supply a value for either the bosh_service_url or websocket_url or both.");
+        }
+        if (('WebSocket' in window || 'MozWebSocket' in window) && _converse.websocket_url) {
+            _converse.connection = new Strophe.Connection(_converse.websocket_url, _converse.connection_options);
+        } else if (_converse.bosh_service_url) {
+            _converse.connection = new Strophe.Connection(
+                _converse.bosh_service_url,
+                _.assignIn(_converse.connection_options, {'keepalive': _converse.keepalive})
+            );
+        } else {
+            throw new Error("initConnection: this browser does not support websockets and bosh_service_url wasn't specified.");
+        }
+    }
+    _converse.emit('connectionInitialized');
+}
+
 
 function setUpXMLLogging () {
     Strophe.log = function (level, msg) {
@@ -414,6 +418,7 @@ function setUpXMLLogging () {
 function finishInitialization () {
     initPlugins();
     initClientConfig();
+    _converse.initConnection();
     setUpXMLLogging();
     _converse.logIn();
     _converse.registerGlobalEventHandlers();
@@ -425,9 +430,13 @@ function finishInitialization () {
             _converse.api.disco.own.features.add(Strophe.NS.IDLE);
         });
     }
-    _converse.initialized = true;
 }
 
+
+function unregisterGlobalEventHandlers () {
+    document.removeEventListener("visibilitychange", _converse.saveWindowState);
+    _converse.emit('unregisteredGlobalEventHandlers');
+}
 
 function cleanup () {
     // Looks like _converse.initialized was called again without logging
@@ -435,6 +444,7 @@ function cleanup () {
     // This happens in tests. We therefore first clean up.
     Backbone.history.stop();
     _converse.chatboxviews.closeAllChatBoxes();
+    unregisterGlobalEventHandlers();
     window.localStorage.clear();
     window.sessionStorage.clear();
     if (_converse.bookmarks) {
@@ -442,9 +452,7 @@ function cleanup () {
     }
     delete _converse.controlboxtoggle;
     delete _converse.chatboxviews;
-    if (_converse._connection) {
-        _converse._connection.reset();
-    }
+    _converse.connection.reset();
     _converse.stopListening();
     _converse.tearDown();
     delete _converse.config;
@@ -457,7 +465,7 @@ _converse.initialize = function (settings, callback) {
     settings = !_.isUndefined(settings) ? settings : {};
     const init_promise = u.getResolveablePromise();
     _.each(PROMISES, addPromise);
-    if (_converse.initialized) {
+    if (!_.isUndefined(_converse.connection)) {
         cleanup();
     }
 
@@ -815,7 +823,7 @@ _converse.initialize = function (settings, callback) {
         _converse.emit('logout');
     };
 
-    this.saveWindowState = function (ev, hidden) {
+    this.saveWindowState = function (ev) {
         // XXX: eventually we should be able to just use
         // document.visibilityState (when we drop support for older
         // browsers).
@@ -832,7 +840,7 @@ _converse.initialize = function (settings, callback) {
         if (ev.type in event_map) {
             state = event_map[ev.type];
         } else {
-            state = document[hidden] ? "hidden" : "visible";
+            state = document.hidden ? "hidden" : "visible";
         }
         if (state  === 'visible') {
             _converse.clearMsgCounter();
@@ -842,29 +850,8 @@ _converse.initialize = function (settings, callback) {
     };
 
     this.registerGlobalEventHandlers = function () {
-        // Taken from:
-        // http://stackoverflow.com/questions/1060008/is-there-a-way-to-detect-if-a-browser-window-is-not-currently-active
-        let hidden = "hidden";
-        // Standards:
-        if (hidden in document) {
-            document.addEventListener("visibilitychange", _.partial(_converse.saveWindowState, _, hidden));
-        } else if ((hidden = "mozHidden") in document) {
-            document.addEventListener("mozvisibilitychange", _.partial(_converse.saveWindowState, _, hidden));
-        } else if ((hidden = "webkitHidden") in document) {
-            document.addEventListener("webkitvisibilitychange", _.partial(_converse.saveWindowState, _, hidden));
-        } else if ((hidden = "msHidden") in document) {
-            document.addEventListener("msvisibilitychange", _.partial(_converse.saveWindowState, _, hidden));
-        } else if ("onfocusin" in document) {
-            // IE 9 and lower:
-            document.onfocusin = document.onfocusout = _.partial(_converse.saveWindowState, _, hidden);
-        } else {
-            // All others:
-            window.onpageshow = window.onpagehide = window.onfocus = window.onblur = _.partial(_converse.saveWindowState, _, hidden);
-        }
-        // set the initial state (but only if browser supports the Page Visibility API)
-        if( document[hidden] !== undefined ) {
-            _.partial(_converse.saveWindowState, _, hidden)({type: document[hidden] ? "blur" : "focus"});
-        }
+        document.addEventListener("visibilitychange", _converse.saveWindowState);
+        _converse.saveWindowState({'type': document.hidden ? "blur" : "focus"}); // Set initial state
         _converse.emit('registeredGlobalEventHandlers');
     };
 
@@ -1215,11 +1202,12 @@ _converse.initialize = function (settings, callback) {
         return _converse;
     };
 
+
     // Initialization
     // --------------
     // This is the end of the initialize method.
     if (settings.connection) {
-        this._connection = settings.connection;
+        this.connection = settings.connection;
     }
 
     if (!_.isUndefined(_converse.connection) &&
@@ -1234,8 +1222,8 @@ _converse.initialize = function (settings, callback) {
             _converse.locales,
             u.interpolate(_converse.locales_url, {'locale': _converse.locale}))
         .catch(e => _converse.log(e.message, Strophe.LogLevel.FATAL))
-        .then(finishInitialization)
-        .catch(_.partial(_converse.log, _, Strophe.LogLevel.FATAL));
+        .finally(finishInitialization)
+        .catch(e => _converse.log(e.message, Strophe.LogLevel.FATAL));
     }
     return init_promise;
 };

@@ -1,9 +1,24 @@
 # Changelog
 
-## 4.0.6 (unreleased)
+## 4.0.7 (Unreleased)
 
+- Bugfix: MUC commands were being ignored
+- UI: Always show the OMEMO lock icon (grayed out if not available).
+- #1353 Message Delivery Receipts not working because of the message "type" attribute
+- #1374 Can't load embedded chat when changing `view_mode` between page reloads
+- #1376 Fixed some alignment issues in the sidebar
+- #1378 Message Delivery Receipts were being sent for carbons and own messages
+- #1379 MUC unread messages indicator is failing
+
+## 4.0.6 (2018-12-07)
+
+- Updated translations: ar, cs, de, es, eu, fr, gl, hu, id, it, ja, nb, pt_BR
 - Don't render http (i.e. non-TLS) resources
+- Bugfix: Converse caused `RID out of range` errors on Prosody
+- Bugfix: MUC messages sometimes appear twice after resync.
 - #1331 Fix missing checkmarks in old muc messages
+- #1333 Don't send receipt requests in MUCs
+- #1348 Font gets cut off in Firefox #1348
 
 ## 4.0.5 (2018-11-15)
 

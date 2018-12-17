@@ -467,10 +467,7 @@ converse.plugins.add('converse-minimize', {
             },
 
             updateUnreadMessagesCounter () {
-                const ls = this.model.pluck('num_unread');
-                let count = 0, i;
-                for (i=0; i<ls.length; i++) { count += ls[i]; }
-                this.toggleview.model.save({'num_unread': count});
+                this.toggleview.model.save({'num_unread': _.sum(this.model.pluck('num_unread'))});
                 this.render();
             }
         });
@@ -509,8 +506,10 @@ converse.plugins.add('converse-minimize', {
             }
         });
 
-        _converse.api.waitUntil('chatBoxViewsInitialized')
-        .then(() => {
+        Promise.all([
+            _converse.api.waitUntil('connectionInitialized'),
+            _converse.api.waitUntil('chatBoxViewsInitialized')
+        ]).then(() => {
             _converse.minimized_chats = new _converse.MinimizedChats({
                 model: _converse.chatboxes
             });
@@ -518,15 +517,18 @@ converse.plugins.add('converse-minimize', {
         }).catch(_.partial(_converse.log, _, Strophe.LogLevel.FATAL));
 
 
-        _converse.on('registeredGlobalEventHandlers', function () {
-            window.addEventListener("resize", _.debounce(function (ev) {
-                if (_converse.connection.connected) {
-                    _converse.chatboxviews.trimChats();
-                }
-            }, 200));
-        });
+        const debouncedTrim = _.debounce(ev => {
+            if (_converse.view_mode !== 'overlayed') {
+                return;
+            }
+            if (_converse.connection.connected) {
+                _converse.chatboxviews.trimChats();
+            }
+        }, 200);
+        _converse.api.listen.on('registeredGlobalEventHandlers', () => window.addEventListener("resize", debouncedTrim));
+        _converse.api.listen.on('unregisteredGlobalEventHandlers', () => window.removeEventListener("resize", debouncedTrim));
 
-        _converse.on('controlBoxOpened', function (chatbox) {
+        _converse.api.listen.on('controlBoxOpened', function (chatbox) {
             // Wrapped in anon method because at scan time, chatboxviews
             // attr not set yet.
             if (_converse.connection.connected) {

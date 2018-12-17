@@ -40,6 +40,9 @@ converse.plugins.add('converse-roomslist', {
         const { _converse } = this,
               { __ } = _converse;
 
+        // Promises exposed by this plugin
+        _converse.api.promises.add('roomsListInitialized');
+
 
         _converse.OpenRooms = Backbone.Collection.extend({
 
@@ -116,7 +119,7 @@ converse.plugins.add('converse-roomslist', {
                         // supported by the XMPP server. So we can use it
                         // as a check for support (other ways of checking are async).
                         'allow_bookmarks': _converse.allow_bookmarks && _converse.bookmarks,
-                        'currently_open': _converse.isSingleton() && !this.model.get('hidden'),
+                        'currently_open': _converse.isUniView() && !this.model.get('hidden'),
                         'info_leave_room': __('Leave this groupchat'),
                         'info_remove_bookmark': __('Unbookmark this groupchat'),
                         'info_add_bookmark': __('Bookmark this groupchat'),
@@ -266,17 +269,14 @@ converse.plugins.add('converse-roomslist', {
 
             model.browserStorage = new Backbone.BrowserStorage[storage](id);
             _converse.rooms_list_view = new _converse.RoomsListView({'model': model});
+            _converse.api.emit('roomsListInitialized');
         };
 
         if (_converse.allow_bookmarks) {
-            u.onMultipleEvents([
-                    {'object': _converse, 'event': 'chatBoxesFetched'},
-                    {'object': _converse, 'event': 'roomsPanelRendered'},
-                    {'object': _converse, 'event': 'bookmarksInitialized'}
-                ], initRoomsListView);
+            _converse.api.waitUntil('bookmarksInitialized').then(initRoomsListView);
         } else {
             u.onMultipleEvents([
-                    {'object': _converse, 'event': 'chatBoxesFetched'},
+                    {'object': _converse, 'event': 'chatBoxesInitialized'},
                     {'object': _converse, 'event': 'roomsPanelRendered'}
                 ], initRoomsListView);
         }
