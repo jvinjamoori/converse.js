@@ -40,7 +40,7 @@ converse.plugins.add('converse-chatboxes', {
         });
         _converse.api.promises.add([
             'chatBoxesFetched',
-            'ehatBoxesInitialized',
+            'chatBoxesInitialized',
             'privateChatsAutoJoined'
         ]);
 
@@ -433,7 +433,8 @@ converse.plugins.add('converse-chatboxes', {
                 } else {
                     message = this.messages.create(attrs);
                 }
-                return this.sendMessageStanza(this.createMessageStanza(message));
+                this.sendMessageStanza(this.createMessageStanza(message));
+                return true;
             },
 
             sendChatState () {
@@ -729,7 +730,9 @@ converse.plugins.add('converse-chatboxes', {
                     'from': _converse.connection.jid,
                     'id': _converse.connection.getUniqueId(),
                     'to': to_jid,
-                }).c('received', {'xmlns': Strophe.NS.RECEIPTS, 'id': id}).up();
+                    'type': 'chat',
+                }).c('received', {'xmlns': Strophe.NS.RECEIPTS, 'id': id}).up()
+                .c('store', {'xmlns': Strophe.NS.HINTS}).up();
                 _converse.api.send(receipt_stanza);
             },
 

@@ -31,7 +31,7 @@ converse.plugins.add('converse-minimize', {
     dependencies: ["converse-chatview", "converse-controlbox", "converse-muc", "converse-muc-views", "converse-headline"],
 
     enabled (_converse) {
-        return _converse.view_mode == 'overlayed';
+        return _converse.view_mode === 'overlayed';
     },
 
     overrides: {
@@ -82,7 +82,9 @@ converse.plugins.add('converse-minimize', {
 
             _show () {
                 const { _converse } = this.__super__;
-                if (!this.model.get('minimized')) {
+                if (_converse.view_mode !== 'overlayed') {
+                    return this.__super__._show.apply(this, arguments);
+                } else if (!this.model.get('minimized')) {
                     this.__super__._show.apply(this, arguments);
                     _converse.chatboxviews.trimChats(this);
                 } else {
@@ -518,7 +520,7 @@ converse.plugins.add('converse-minimize', {
 
 
         const debouncedTrim = _.debounce(ev => {
-            if (_converse.view_mode !== 'overlayed') {
+            if (_converse.view_mode !== 'overlayed' || !_converse.chatboxviews.trimChats) {
                 return;
             }
             if (_converse.connection.connected) {

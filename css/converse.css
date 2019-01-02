@@ -6,6 +6,18 @@
  * Licensed under the Mozilla Public License
  */
 @font-face {
+  font-family: 'Baumans';
+  font-style: normal;
+  font-weight: 400;
+  src: local("Baumans Regular"), local("Baumans-Regular"), url(webfonts/baumans.ttf) format("truetype"); }
+
+@font-face {
+  font-family: 'Muli';
+  font-style: normal;
+  font-weight: 400;
+  src: local("Muli Regular"), local("Muli-Regular"), url(webfonts/muli.ttf) format("truetype"); }
+
+@font-face {
   font-family: 'ConverseFontAwesomeBrands';
   font-style: normal;
   font-weight: normal;
@@ -9351,7 +9363,8 @@ readers do not read off random characters that represent icons */
   --mobile-chat-width: 100%;
   --mobile-chat-height: 400px;
   --normal-font: "Helvetica", "Arial", sans-serif;
-  --heading-font: futura, 'Century Gothic', 'URW Gothic L', Verdana, sans-serif;
+  --heading-font: 'Muli', normal;
+  --branding-font: 'Baumans', cursive;
   --heading-display: block;
   --heading-color: white;
   --chatroom-head-color: #E77051;
@@ -9470,30 +9483,6 @@ readers do not read off random characters that represent icons */
 body.reset {
   margin: 0; }
 
-@font-face {
-  font-family: 'Converse-js';
-  src: url("webfonts/icomoon/fonts/icomoon.eot?wvi0ht");
-  src: url("webfonts/icomoon/fonts/icomoon.eot?wvi0ht#iefix") format("embedded-opentype"), url("webfonts/icomoon/fonts/icomoon.ttf?wvi0ht") format("truetype"), url("webfonts/icomoon/fonts/icomoon.woff?wvi0ht") format("woff"), url("webfonts/icomoon/fonts/icomoon.svg?wvi0ht#icomoon") format("svg");
-  font-weight: normal;
-  font-style: normal; }
-
-.icon-conversejs {
-  padding-right: 0.5em;
-  font-family: 'Converse-js';
-  font-size: 80%;
-  speak: none;
-  font-style: normal;
-  font-weight: normal;
-  font-variant: normal;
-  text-transform: none;
-  line-height: 1;
-  /* Better Font Rendering =========== */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale; }
-
-.icon-conversejs:before {
-  content: "\e600"; }
-
 .converse-brand {
   display: flex;
   justify-content: space-between;
@@ -9554,14 +9543,12 @@ body.reset {
       max-width: 83.33333%; } }
 
 .converse-brand__text {
-  font-family: var(--heading-font);
+  font-family: var(--branding-font);
   font-weight: normal;
   width: 50%;
   margin: auto;
   margin-top: 10%;
   text-align: center; }
-  .converse-brand__text .icon-conversejs {
-    font-size: 60%; }
 
 .converse-brand__byline {
   font-size: var(--font-size-small);
@@ -9583,6 +9570,8 @@ body.reset {
   font-size: var(--font-size);
   direction: ltr;
   z-index: 1031; }
+  #conversejs textarea:disabled {
+    background-color: #EEE !important; }
   #conversejs .nopadding {
     padding: 0 !important; }
   #conversejs.converse-overlayed > .row {
@@ -9596,7 +9585,26 @@ body.reset {
     text-align: center; }
   #conversejs .brand-heading {
     font-size: 200%;
-    font-family: var(--heading-font); }
+    display: inline-flex;
+    align-items: flex-end;
+    font-family: var(--branding-font); }
+    #conversejs .brand-heading:hover .brand-name {
+      color: var(--link-color); }
+    #conversejs .brand-heading .converse-svg-logo {
+      height: 1.2em;
+      margin-right: 0.25em;
+      margin-bottom: -0.3em; }
+      #conversejs .brand-heading .converse-svg-logo .cls-1 {
+        isolation: isolate; }
+      #conversejs .brand-heading .converse-svg-logo .cls-2 {
+        opacity: 0.5;
+        mix-blend-mode: multiply; }
+      #conversejs .brand-heading .converse-svg-logo .cls-3 {
+        fill: var(--link-color); }
+      #conversejs .brand-heading .converse-svg-logo .cls-4 {
+        fill: var(--link-color); }
+  #conversejs .brand-heading--inverse .converse-svg-logo {
+    margin-bottom: 0em; }
   #conversejs .popover {
     position: fixed; }
   #conversejs .converse-chatboxes {
@@ -9698,7 +9706,6 @@ body.reset {
     font-weight: normal;
     font-size: 90%; }
   #conversejs .btn {
-    font-family: var(--heading-font);
     font-weight: normal;
     color: #fff; }
     #conversejs .btn .fa, #conversejs .btn .far, #conversejs .btn .fas {
@@ -11924,7 +11931,8 @@ body.reset {
       text-overflow: ellipsis;
       white-space: nowrap;
       font-family: var(--heading-font);
-      font-size: 115%; }
+      font-size: 115%;
+      font-weight: bold; }
       #conversejs .message.chat-msg .chat-msg__heading .chat-msg__author .badge {
         font-size: 80%;
         font-family: var(--normal_font); }
