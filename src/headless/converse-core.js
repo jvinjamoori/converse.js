@@ -1,7 +1,7 @@
 // Converse.js
 // https://conversejs.org
 //
-// Copyright (c) 2013-2018, the Converse.js developers
+// Copyright (c) 2013-2019, the Converse.js developers
 // Licensed under the Mozilla Public License (MPLv2)
 
 import { $build, $iq, $msg, $pres, SHA1, Strophe } from "strophe.js";
@@ -72,7 +72,7 @@ const _converse = {
     'promises': {}
 }
 
- _converse.VERSION_NAME = "v4.0.6";
+_converse.VERSION_NAME = "v4.1.2";
 
 _.extend(_converse, Backbone.Events);
 
@@ -84,7 +84,6 @@ pluggable.enable(_converse, '_converse', 'pluggable');
 // the other plugins are whitelisted in src/converse.js
 _converse.core_plugins = [
     'converse-chatboxes',
-    'converse-core',
     'converse-disco',
     'converse-mam',
     'converse-muc',
@@ -206,7 +205,7 @@ _converse.default_settings = {
     keepalive: true,
     locales_url: 'locale/{{{locale}}}/LC_MESSAGES/converse.json',
     locales: [
-        'af', 'ar', 'bg', 'ca', 'cs', 'de', 'es', 'eu', 'en', 'fr', 'gl',
+        'af', 'ar', 'bg', 'ca', 'cs', 'de', 'eo', 'es', 'eu', 'en', 'fr', 'gl',
         'he', 'hi', 'hu', 'id', 'it', 'ja', 'nb', 'nl',
         'pl', 'pt_BR', 'ro', 'ru', 'tr', 'uk', 'zh_CN', 'zh_TW'
     ],
@@ -368,7 +367,7 @@ function initClientConfig () {
      * What this means is that config values need to persist across
      * user sessions.
      */
-    const id = b64_sha1('converse.client-config');
+    const id = 'converse.client-config';
     _converse.config = new Backbone.Model({
         'id': id,
         'trusted': _converse.trusted && true || false,
@@ -417,8 +416,8 @@ function setUpXMLLogging () {
 
 
 function finishInitialization () {
-    initPlugins();
     initClientConfig();
+    initPlugins();
     _converse.initConnection();
     setUpXMLLogging();
     _converse.logIn();
@@ -464,7 +463,7 @@ function cleanup () {
 }
 
 
-_converse.initialize = function (settings, callback) {
+_converse.initialize = async function (settings, callback) {
     settings = !_.isUndefined(settings) ? settings : {};
     const init_promise = u.getResolveablePromise();
     _.each(PROMISES, addPromise);
@@ -795,7 +794,7 @@ _converse.initialize = function (settings, callback) {
 
 
     this.initSession = function () {
-        const id = b64_sha1('converse.bosh-session');
+        const id = 'converse.bosh-session';
         _converse.session = new Backbone.Model({id});
         _converse.session.browserStorage = new Backbone.BrowserStorage.session(id);
         _converse.session.fetch();
@@ -1213,21 +1212,18 @@ _converse.initialize = function (settings, callback) {
         this.connection = settings.connection;
     }
 
-    if (!_.isUndefined(_converse.connection) &&
-            _converse.connection.service === 'jasmine tests') {
+    if (_.get(_converse.connection, 'service') === 'jasmine tests') {
         finishInitialization();
         return _converse;
-    } else if (_.isUndefined(i18n)) {
-        finishInitialization();
-    } else {
-        i18n.fetchTranslations(
-            _converse.locale,
-            _converse.locales,
-            u.interpolate(_converse.locales_url, {'locale': _converse.locale}))
-        .catch(e => _converse.log(e.message, Strophe.LogLevel.FATAL))
-        .finally(finishInitialization)
-        .catch(e => _converse.log(e.message, Strophe.LogLevel.FATAL));
+    } else if (!_.isUndefined(i18n)) {
+        const url = u.interpolate(_converse.locales_url, {'locale': _converse.locale});
+        try {
+            await i18n.fetchTranslations(_converse.locale, _converse.locales, url);
+        } catch (e) {
+            _converse.log(e.message, Strophe.LogLevel.FATAL);
+        }
     }
+    finishInitialization();
     return init_promise;
 };
 
@@ -1644,7 +1640,7 @@ _converse.api = {
      */
     'send' (stanza) {
         _converse.connection.send(stanza);
-        _converse.emit('send', stanza); 
+        _converse.emit('send', stanza);
     },
 
     /**
@@ -1657,7 +1653,7 @@ _converse.api = {
     'sendIQ' (stanza, timeout) {
         return new Promise((resolve, reject) => {
             _converse.connection.sendIQ(stanza, resolve, reject, timeout || _converse.IQ_TIMEOUT);
-            _converse.emit('send', stanza); 
+            _converse.emit('send', stanza);
         });
     }
 };

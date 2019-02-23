@@ -1,18 +1,55 @@
 # Changelog
 
-## 4.0.7 (Unreleased)
+## 4.1.2 (2019-02-22)
+
+- Updated translations: af, cz, de, es, he, it, nl, nl_BE, pt_BR, zh_CN
+- Bugfix. Prevent duplicate messages by comparing MAM archive id to XEP-0359 stanza ids.
+- Bugfix. Open groupchats not shown when logging in after disconnection.
+- #1406: `TypeError: e.devicelists is undefined` when unchecking the "trusted device" checkbox
+
+## 4.1.1 (2019-02-18)
+
+- Updated translations: af, cz, de, es, eu, ga, he, hi, ja, nb, nl_BE, zh_CN
+- New language supported: Esperanto
+- Accessibility: Tag the chat-content as an ARIA live region, for screen readers
+- Set releases URL to new Github repo
+- Rudimentary support for XEP-0333 chat markers
+- Better support for XEP-0359 `stanza-id` and `origin-id` elements.
+- Bugfix: restore textarea size after sending a message
+- Bugfix: MUC invite form not appearing
+- #1369 Don't wrongly interpret message with `subject` as a topic change.
+- #1405 Status of contacts list are not displayed properly
+- #1408 New config option `roomconfig_whitelist`
+- #1410 HTTP upload not working if conversations push proxy is used
+- #1412 MUC moderator commands can be disabled selectively by config
+- #1413 Fix moderator commands that change affiliation
+- #1414 Prevent duplicate messages on MUC join
+- #1417 Margin between nickname and badge
+- #1421 Fix direct invite for membersonly room
+- #1422 Resurrect the `muc_show_join_leave` option
+- #1438 Update contact nickname when receiving a roster push
+- #1442 MUC read receipts causing empty lines
+
+## 4.1.0 (2019-01-11)
 
 - Bugfix: MUC commands were being ignored
+- Bugfix: Multiple rooms shown active in the rooms list
+- Bugfix: Don't open chats when receiving messages without a `body`
+- Bugfix: Typing in the textarea can become very slow in large MUCs
 - UI: Always show the OMEMO lock icon (grayed out if not available).
 - Use `publish-options` with `pubsub#access_model` set to `open` when publishing OMEMO public keys and devices
 - Add a new `converse-pubsub` plugin, for generic PubSub operations
 - #1180 It's now possible to use OMEMO in a MUC (if it's members-only and non-anonymous)
+- #1334 Force avatar refetch when receiving `vcard-temp:x:update`
+- #1337 `send_chat_state_notifications` doesn't work in MUCs
 - #1353 Message Delivery Receipts not working because of the message "type" attribute
+- #1356 Make triangle icon usable 
 - #1374 Can't load embedded chat when changing `view_mode` between page reloads
 - #1376 Fixed some alignment issues in the sidebar
 - #1378 Message Delivery Receipts were being sent for carbons and own messages
 - #1379 MUC unread messages indicator is failing
 - #1382 Message Delivery Receipts: Set store hint and type='chat'
+- #1388 implement muc-owner command `/destroy`
 
 ## 4.0.6 (2018-12-07)
 

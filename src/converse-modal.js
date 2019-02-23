@@ -1,11 +1,11 @@
 // Converse.js
 // http://conversejs.org
 //
-// Copyright (c) 2013-2018, the Converse.js developers
+// Copyright (c) 2013-2019, the Converse.js developers
 // Licensed under the Mozilla Public License (MPLv2)
 
 import "backbone.vdomview";
-import bootstrap from "bootstrap";
+import bootstrap from "bootstrap.native";
 import converse from "@converse/headless/converse-core";
 import tpl_alert_modal from "templates/alert_modal.html";
 

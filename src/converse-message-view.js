@@ -1,7 +1,7 @@
 // Converse.js
 // https://conversejs.org
 //
-// Copyright (c) 2013-2018, the Converse.js developers
+// Copyright (c) 2013-2019, the Converse.js developers
 // Licensed under the Mozilla Public License (MPLv2)
 
 import converse from  "@converse/headless/converse-core";
@@ -20,7 +20,7 @@ const { Backbone, _, moment } = converse.env;
 
 converse.plugins.add('converse-message-view', {
 
-    dependencies: ["converse-modal"],
+    dependencies: ["converse-modal", "converse-chatboxviews"],
 
     initialize () {
         /* The initialize function gets called as soon as the plugin is

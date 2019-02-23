@@ -10,7 +10,7 @@ import "converse-chatview";
 import "converse-profile";
 import "converse-rosterview";
 import _FormData from "formdata-polyfill";
-import bootstrap from "bootstrap";
+import bootstrap from "bootstrap.native";
 import converse from "@converse/headless/converse-core";
 import fp from "@converse/headless/lodash.fp";
 import tpl_brand_heading from "templates/converse_brand_heading.html";
@@ -83,19 +83,6 @@ converse.plugins.add('converse-controlbox', {
         // relevant objects or classes.
         //
         // New functions which don't exist yet can also be added.
-
-        tearDown () {
-            this.__super__.tearDown.apply(this, arguments);
-            if (this.rosterview) {
-                // Removes roster groups
-                this.rosterview.model.off().reset();
-                this.rosterview.each(function (groupview) {
-                    groupview.removeAll();
-                    groupview.remove();
-                });
-                this.rosterview.removeAll().remove();
-            }
-        },
 
         ChatBoxes: {
             model (attrs, options) {
@@ -257,8 +244,7 @@ converse.plugins.add('converse-controlbox', {
                         !_converse.connection.authenticated ||
                         _converse.connection.disconnecting) {
                     this.renderLoginPanel();
-                } else if (this.model.get('connected') &&
-                        (!this.controlbox_pane || !u.isVisible(this.controlbox_pane.el))) {
+                } else if (this.model.get('connected')) {
                     this.renderControlBoxPane();
                 }
                 return this;
@@ -323,6 +309,9 @@ converse.plugins.add('converse-controlbox', {
                 if (this.loginpanel) {
                     this.loginpanel.remove();
                     delete this.loginpanel;
+                }
+                if (this.controlbox_pane && u.isVisible(this.controlbox_pane.el)) {
+                    return;
                 }
                 this.el.classList.remove("logged-out");
                 this.controlbox_pane = new _converse.ControlBoxPane();
@@ -650,8 +639,16 @@ converse.plugins.add('converse-controlbox', {
             view.model.set({'connected': false});
             return view;
         };
-        _converse.on('disconnected', () => disconnect().renderLoginPanel());
-        _converse.on('will-reconnect', disconnect);
+        _converse.api.listen.on('disconnected', () => disconnect().renderLoginPanel());
+        _converse.api.listen.on('will-reconnect', disconnect);
+
+        _converse.api.listen.on('clearSession', () => {
+            const view = _converse.chatboxviews.get('controlbox');
+            if (view && view.controlbox_pane) {
+                view.controlbox_pane.remove();
+                delete view.controlbox_pane;
+            }
+        });
 
 
         /************************ BEGIN API ************************/

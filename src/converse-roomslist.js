@@ -1,7 +1,7 @@
 // Converse.js (A browser based XMPP chat client)
 // http://conversejs.org
 //
-// Copyright (c) 2013-2018, Jan-Carel Brand <jc@opkode.com>
+// Copyright (c) 2013-2019, Jan-Carel Brand <jc@opkode.com>
 // Licensed under the Mozilla Public License (MPLv2)
 
 /* This is a non-core Converse.js plugin which shows a list of currently open
@@ -13,7 +13,7 @@ import muc from "@converse/headless/converse-muc";
 import tpl_rooms_list from "templates/rooms_list.html";
 import tpl_rooms_list_item from "templates/rooms_list_item.html"
 
-const { Backbone, Promise, Strophe, b64_sha1, sizzle, _ } = converse.env;
+const { Backbone, Promise, Strophe, sizzle, _ } = converse.env;
 const u = converse.env.utils;
 
 
@@ -170,7 +170,7 @@ converse.plugins.add('converse-roomslist', {
                 this.model.on('remove', this.showOrHide, this);
 
                 const storage = _converse.config.get('storage'),
-                      id = b64_sha1(`converse.roomslist${_converse.bare_jid}`);
+                      id = `converse.roomslist${_converse.bare_jid}`;
 
                 this.list_model = new _converse.RoomsList({'id': id});
                 this.list_model.browserStorage = new Backbone.BrowserStorage[storage](id);
@@ -212,14 +212,15 @@ converse.plugins.add('converse-roomslist', {
                 u.showElement(this.el);
             },
 
-            openRoom (ev) {
+            async openRoom (ev) {
                 ev.preventDefault();
                 const name = ev.target.textContent;
                 const jid = ev.target.getAttribute('data-room-jid');
                 const data = {
                     'name': name || Strophe.unescapeNode(Strophe.getNodeFromJid(jid)) || jid
                 }
-                _converse.api.rooms.open(jid, data);
+                await _converse.api.rooms.open(jid, data);
+                _converse.api.chatviews.get(jid).focus();
             },
 
             closeRoom (ev) {
@@ -245,7 +246,7 @@ converse.plugins.add('converse-roomslist', {
 
             toggleRoomsList (ev) {
                 if (ev && ev.preventDefault) { ev.preventDefault(); }
-                const icon_el = ev.target.querySelector('.fa');
+                const icon_el = ev.target.matches('.fa') ? ev.target : ev.target.querySelector('.fa');
                 if (icon_el.classList.contains("fa-caret-down")) {
                     u.slideIn(this.el.querySelector('.open-rooms-list')).then(() => {
                         this.list_model.save({'toggle-state': _converse.CLOSED});
@@ -264,7 +265,7 @@ converse.plugins.add('converse-roomslist', {
 
         const initRoomsListView = function () {
             const storage = _converse.config.get('storage'),
-                  id = b64_sha1(`converse.open-rooms-{_converse.bare_jid}`),
+                  id = `converse.open-rooms-{_converse.bare_jid}`,
                   model = new _converse.OpenRooms();
 
             model.browserStorage = new Backbone.BrowserStorage[storage](id);
@@ -272,14 +273,17 @@ converse.plugins.add('converse-roomslist', {
             _converse.api.emit('roomsListInitialized');
         };
 
-        if (_converse.allow_bookmarks) {
-            _converse.api.waitUntil('bookmarksInitialized').then(initRoomsListView);
-        } else {
-            u.onMultipleEvents([
-                    {'object': _converse, 'event': 'chatBoxesInitialized'},
-                    {'object': _converse, 'event': 'roomsPanelRendered'}
-                ], initRoomsListView);
-        }
+        _converse.on('connected', async () =>  {
+            if (_converse.allow_bookmarks) {
+                await _converse.api.waitUntil('bookmarksInitialized');
+            } else {
+                await Promise.all([
+                    _converse.api.waitUntil('chatBoxesFetched'),
+                    _converse.api.waitUntil('roomsPanelRendered')
+                ]);
+            }
+            initRoomsListView();
+        });
 
         _converse.api.listen.on('reconnected', initRoomsListView);
     }

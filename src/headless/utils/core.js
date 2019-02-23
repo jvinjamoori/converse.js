@@ -3,7 +3,7 @@
 //
 // This is the utilities module.
 //
-// Copyright (c) 2013-2018, Jan-Carel Brand <jc@opkode.com>
+// Copyright (c) 2013-2019, Jan-Carel Brand <jc@opkode.com>
 // Licensed under the Mozilla Public License (MPLv2)
 //
 /*global escape, Uint8Array */
@@ -15,6 +15,10 @@ import _ from "../lodash.noconflict";
 import sizzle from "sizzle";
 
 const u = {};
+
+u.toStanza = function (string) {
+    return Strophe.xmlHtmlNode(string).firstElementChild;
+}
 
 u.getLongestSubstring = function (string, candidates) {
     function reducer (accumulator, current_value) {
@@ -71,20 +75,27 @@ u.isNewMessage = function (message) {
             sizzle(`result[xmlns="${Strophe.NS.MAM}"]`, message).length &&
             sizzle(`delay[xmlns="${Strophe.NS.DELAY}"]`, message).length
         );
-    } else {
-        return !(message.get('is_delayed') && message.get('is_archived'));
+    } else if (message instanceof Backbone.Model) {
+        message = message.attributes;
     }
+    return !(message['is_delayed'] && message['is_archived']);
+};
+
+u.isEmptyMessage = function (attrs) {
+    if (attrs instanceof Backbone.Model) {
+        attrs = attrs.attributes;
+    }
+    return !attrs['oob_url'] &&
+        !attrs['file'] &&
+        !(attrs['is_encrypted'] && attrs['plaintext']) &&
+        !attrs['message'];
 };
 
 u.isOnlyChatStateNotification = function (attrs) {
     if (attrs instanceof Backbone.Model) {
         attrs = attrs.attributes;
     }
-    return attrs['chat_state'] &&
-        !attrs['oob_url'] &&
-        !attrs['file'] &&
-        !(attrs['is_encrypted'] && attrs['plaintext']) &&
-        !attrs['message'];
+    return attrs['chat_state'] && u.isEmptyMessage(attrs);
 };
 
 u.isHeadlineMessage = function (_converse, message) {

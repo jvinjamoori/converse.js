@@ -1,14 +1,14 @@
 // Converse.js
 // http://conversejs.org
 //
-// Copyright (c) 2013-2018, the Converse.js developers
+// Copyright (c) 2013-2019, the Converse.js developers
 // Licensed under the Mozilla Public License (MPLv2)
 
 import "converse-chatboxviews";
 import "converse-message-view";
 import "converse-modal";
 import * as twemoji from "twemoji";
-import bootstrap from "bootstrap";
+import bootstrap from "bootstrap.native";
 import converse from "@converse/headless/converse-core";
 import tpl_alert from "templates/alert.html";
 import tpl_chatbox from "templates/chatbox.html";
@@ -431,13 +431,14 @@ converse.plugins.add('converse-chatview', {
                     return;
                 }
                 const contact_jid = this.model.get('jid');
-                const resources = this.model.presence.get('resources');
-                if (_.isEmpty(resources)) {
+                if (this.model.presence.resources.length === 0) {
                     return;
                 }
-                const results = await Promise.all(_.map(_.keys(resources),
-                    resource => _converse.api.disco.supports(Strophe.NS.SPOILER, `${contact_jid}/${resource}`)
-                ));
+                const results = await Promise.all(
+                    this.model.presence.resources.map(
+                        res => _converse.api.disco.supports(Strophe.NS.SPOILER, `${contact_jid}/${res.get('name')}`)
+                    )
+                );
                 if (_.filter(results, 'length').length) {
                     const html = tpl_spoiler_button(this.model.toJSON());
                     if (_converse.visible_toolbar_buttons.emoji) {
@@ -750,17 +751,14 @@ converse.plugins.add('converse-chatview', {
                  * Parameters:
                  *  (Backbone.Model) message: The message object
                  */
+                if (!u.isNewMessage(message) && u.isEmptyMessage(message)) {
+                    // Handle archived or delayed messages without any message
+                    // text to show.
+                    return message.destroy();
+                }
                 const view = new _converse.MessageView({'model': message});
                 await view.render();
                 this.clearChatStateNotification(message);
-                if (!view.el.innerHTML) {
-                    // An "inactive" CSN message (for example) will have an
-                    // empty body. No need to then continue.
-                    return _converse.log(
-                        "Not inserting a message with empty element",
-                        Strophe.LogLevel.INFO
-                    );
-                }
                 this.insertMessage(view);
                 this.insertDayIndicator(view.el);
                 this.setScrollPosition(view.el);
@@ -878,14 +876,12 @@ converse.plugins.add('converse-chatview', {
                     hint_el.value = '';
                     textarea.value = '';
                     u.removeClass('correcting', textarea);
-                    textarea.focus();
-                    // Trigger input event, so that the textarea resizes
-                    const event = document.createEvent('Event');
-                    event.initEvent('input', true, true);
-                    textarea.dispatchEvent(event);
+                    textarea.style.height = 'auto'; // Fixes weirdness
                     _converse.emit('messageSend', message);
                 }
                 textarea.removeAttribute('disabled');
+                u.removeClass('disabled', textarea);
+                textarea.focus();
                 // Suppress events, otherwise superfluous CSN gets set
                 // immediately after the message, causing rate-limiting issues.
                 this.setChatState(_converse.ACTIVE, {'silent': true});
@@ -1009,8 +1005,11 @@ converse.plugins.add('converse-chatview', {
             },
 
             inputChanged (ev) {
-                ev.target.style.height = 'auto'; // Fixes weirdness
-                ev.target.style.height = (ev.target.scrollHeight) + 'px';
+                const new_height = ev.target.scrollHeight + 'px';
+                if (ev.target.style.height !== new_height) {
+                    ev.target.style.height = 'auto'; // Fixes weirdness
+                    ev.target.style.height = new_height;
+                }
             },
 
             clearMessages (ev) {

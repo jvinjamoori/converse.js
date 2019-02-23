@@ -1,7 +1,7 @@
 // Converse.js
 // http://conversejs.org
 //
-// Copyright (c) 2013-2018, the Converse.js developers
+// Copyright (c) 2013-2019, the Converse.js developers
 // Licensed under the Mozilla Public License (MPLv2)
 
 import "@converse/headless/converse-roster";
@@ -35,16 +35,6 @@ converse.plugins.add('converse-rosterview', {
         // New functions which don't exist yet can also be added.
         afterReconnected () {
             this.__super__.afterReconnected.apply(this, arguments);
-        },
-
-        tearDown () {
-            /* Remove the rosterview when tearing down. It gets created
-             * anew when reconnecting or logging in.
-             */
-            this.__super__.tearDown.apply(this, arguments);
-            if (!_.isUndefined(this.rosterview)) {
-                this.rosterview.remove();
-            }
         },
 
         RosterGroups: {
@@ -688,7 +678,7 @@ converse.plugins.add('converse-rosterview', {
 
             async toggle (ev) {
                 if (ev && ev.preventDefault) { ev.preventDefault(); }
-                const icon_el = ev.target.querySelector('.fa');
+                const icon_el = ev.target.matches('.fa') ? ev.target : ev.target.querySelector('.fa');
                 if (_.includes(icon_el.classList, "fa-caret-down")) {
                     this.model.save({state: _converse.CLOSED});
                     await this.collapse();
@@ -813,7 +803,7 @@ converse.plugins.add('converse-rosterview', {
             createRosterFilter () {
                 // Create a model on which we can store filter properties
                 const model = new _converse.RosterFilter();
-                model.id = b64_sha1(`_converse.rosterfilter${_converse.bare_jid}`);
+                model.id = `_converse.rosterfilter${_converse.bare_jid}`;
                 model.browserStorage = new Backbone.BrowserStorage.local(this.filter.id);
                 this.filter_view = new _converse.RosterFilterView({'model': model});
                 this.filter_view.model.on('change', this.updateFilter, this);
@@ -930,7 +920,7 @@ converse.plugins.add('converse-rosterview', {
                 if (view) {
                     return view.model;
                 }
-                return this.model.create({name, id: b64_sha1(name)});
+                return this.model.create({name, 'id': b64_sha1(name)});
             },
 
             addContactToGroup (contact, name, options) {
@@ -1000,6 +990,15 @@ converse.plugins.add('converse-rosterview', {
         }
         _converse.api.listen.on('rosterInitialized', initRoster);
         _converse.api.listen.on('rosterReadyAfterReconnection', initRoster);
+
+        _converse.api.listen.on('afterTearDown', () => {
+            if (converse.rosterview) {
+                converse.rosterview.model.off().reset();
+                converse.rosterview.each(groupview => groupview.removeAll().remove());
+                converse.rosterview.removeAll().remove();
+                delete converse.rosterview;
+            }
+        });
     }
 });
 

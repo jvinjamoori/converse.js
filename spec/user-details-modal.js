@@ -6,16 +6,16 @@
         ], factory);
 } (this, function (jasmine, mock, test_utils) {
     "use strict";
-    var _ = converse.env._;
-    var $iq = converse.env.$iq;
-    var $msg = converse.env.$msg;
-    var Strophe = converse.env.Strophe;
-    var u = converse.env.utils;
+    const _ = converse.env._;
+    const $iq = converse.env.$iq;
+    const $msg = converse.env.$msg;
+    const Strophe = converse.env.Strophe;
+    const u = converse.env.utils;
 
     return describe("The User Details Modal", function () {
 
         it("can be used to remove a contact",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched', 'chatBoxesFetched'], {},
                 async function (done, _converse) {
 
@@ -26,6 +26,7 @@
             test_utils.openChatBoxFor(_converse, contact_jid);
             await test_utils.waitUntil(() => _converse.chatboxes.length);
             const view = _converse.chatboxviews.get(contact_jid);
+            await new Promise((resolve) => view.model.once('contactAdded', resolve));
             let show_modal_button = view.el.querySelector('.show-user-details-modal');
             expect(u.isVisible(show_modal_button)).toBeTruthy();
             show_modal_button.click();
@@ -48,7 +49,7 @@
         }));
 
         it("shows an alert when an error happened while removing the contact",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched'], {},
                 async function (done, _converse) {
 

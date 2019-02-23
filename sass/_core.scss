@@ -6,67 +6,81 @@
     @include animation-timing-function(ease);
 }
 
-body.reset {
+body.converse-fullscreen {
     margin: 0;
+    background-color: var(--global-background-color);
 }
 
-.converse-brand {
-    display: flex;
-    justify-content: space-between;
-    @include animation-name(fadein);
-    @include animation-fill-mode(forwards);
-    @include animation-duration(750ms);
-    @include animation-timing-function(ease);
+#conversejs-bg {
+    .converse-brand {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 15vh;
+        @include animation-name(fadein);
+        @include animation-fill-mode(forwards);
+        @include animation-duration(5s);
+        @include animation-timing-function(ease);
+    }
+
+    .converse-brand__padding {
+        @include make-col-ready();
+        @include media-breakpoint-up(md) {
+            @include make-col(4);
+        }
+        @include media-breakpoint-up(lg) {
+            @include make-col(3);
+        }
+        @include media-breakpoint-up(xl) {
+            @include make-col(2);
+        }
+        padding: 0;
+    }
+
+    .converse-brand__heading {
+        @include make-col-ready();
+        @include media-breakpoint-up(md) {
+            font-size: 4em;
+            @include make-col(8);
+        }
+        @include media-breakpoint-up(lg) {
+            font-size: 5em;
+            @include make-col(9);
+        }
+        @include media-breakpoint-up(xl) {
+            font-size: 6em;
+            @include make-col(10);
+        }
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        margin: auto;
+        svg {
+            margin-top: 0.3em;
+        }
+    }
+
+    .converse-brand__text {
+        color: #ffffff;
+        font-family: var(--branding-font);
+        font-weight: normal;
+        text-align: center;
+        font-size: 140%;
+        margin-left: 0.2em;
+        .byline {
+            margin: 0;
+            font-family: var(--heading-font);
+            font-size: 0.3em;
+            opacity: 0.55;
+            margin-bottom: 2em;
+            margin-left: -2.7em;
+            word-spacing: 5px;
+        }
+    }
 }
 
-.converse-brand__padding {
-    @include make-col-ready();
-    @include media-breakpoint-up(md) {
-        @include make-col(4);
-    }
-    @include media-breakpoint-up(lg) {
-        @include make-col(3);
-    }
-    @include media-breakpoint-up(xl) {
-        @include make-col(2);
-    }
-    padding: 0;
-}
-
-.converse-brand__heading {
-    @include make-col-ready();
-    @include media-breakpoint-up(md) {
-        font-size: 4em;
-        @include make-col(8);
-    }
-    @include media-breakpoint-up(lg) {
-        font-size: 5em;
-        @include make-col(9);
-    }
-    @include media-breakpoint-up(xl) {
-        font-size: 6em;
-        @include make-col(10);
-    }
-    padding: 0;
-}
-
-.converse-brand__text {
-    font-family: var(--branding-font);
-    font-weight: normal;
-    width: 50%;
-    margin: auto;
-    margin-top: 10%;
-    text-align: center;
-}
-
-.converse-brand__byline {
-    font-size: var(--font-size-small);
-    width: 50%;
-    margin: auto;
-    text-align: center;
-    a {
-        text-decoration: none;
-        color: var(--chatroom-head-color-lighten-25-percent);
+#conversejs-bg, #conversejs {
+    .subdued {
+        opacity: 0.35;
     }
 }
 
@@ -77,7 +91,7 @@ body.reset {
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
     color: var(--text-color);
-    font-family: "Helvetica", "Arial", sans-serif;
+    font-family: var(--normal-font);
     font-size: var(--font-size);
     direction: ltr;
     z-index: 1031; // One more than bootstrap navbar
@@ -112,19 +126,31 @@ body.reset {
     }
 
     .brand-heading {
-        font-size: 200%;
         display: inline-flex;
-        align-items: flex-end;
+        flex-direction: row;
+        align-items: flex-start;
         font-family: var(--branding-font);
-        &:hover {
-            .brand-name {
-                color: var(--link-color);
-            }
+        color: var(--link-color);
+        margin-bottom: 1em;
+
+        .brand-name {
+            color: var(--link-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: -0.5em;
         }
+
+        .brand-name__text {
+            font-size: 120%;
+            vertical-align: text-bottom;
+        }
+
         .converse-svg-logo {
-            height: 1.2em;
+            color: var(--link-color);
+            height: 1.5em;
             margin-right: 0.25em;
-            margin-bottom: -0.3em;
+            margin-bottom: -0.25em;
             .cls-1 {
                 isolation: isolate;
             }
@@ -144,6 +170,15 @@ body.reset {
     .brand-heading--inverse {
         .converse-svg-logo {
             margin-bottom: 0em;
+            margin-top: -0.2em;
+        }
+        .byline {
+            margin: 0;
+            font-family: var(--heading-font);
+            font-size: 0.25em;
+            opacity: 0.55;
+            margin-left: -7em;
+            word-spacing: 5px;
         }
     }
 
@@ -489,14 +524,14 @@ body.reset {
     }
 
     .badge-groupchat {
-        background-color: var(--chatroom-head-color);
+        background-color: var(--chatroom-badge-color);
         border-color: transparent;
         &:hover {
-            background-color: var(--chatroom-head-color-dark);
+            background-color: var(--chatroom-badge-hover-color);
             border-color: transparent;
         }
         &.active {
-            background-color: var(--chatroom-head-color-dark) !important;
+            background-color: var(--chatroom-badge-hover-color) !important;
             border-color: transparent !important;
         }
     }
@@ -572,30 +607,30 @@ body.reset {
 
 
 @media screen and (min-width: 576px) {
-  #conversejs .offset-sm-2 {
-    margin-left: 16.666667%;
-  }
+    #conversejs .offset-sm-2 {
+        margin-left: 16.666667%;
+    }
 }
 @media screen and (min-width: 768px) {
-  #conversejs .offset-md-2 {
-    margin-left: 16.666667%;
-  }
-  #conversejs .offset-md-3 {
-    margin-left: 25%;
-  }
+    #conversejs .offset-md-2 {
+        margin-left: 16.666667%;
+    }
+    #conversejs .offset-md-3 {
+        margin-left: 25%;
+    }
 }
 @media screen and (min-width: 992px) {
-  #conversejs .offset-lg-2 {
-    margin-left: 16.666667%;
-  }
-  #conversejs .offset-lg-3 {
-    margin-left: 25%;
-  }
+    #conversejs .offset-lg-2 {
+        margin-left: 16.666667%;
+    }
+    #conversejs .offset-lg-3 {
+        margin-left: 25%;
+    }
 }
 @media screen and (min-width: 1200px) {
-  #conversejs .offset-xl-2 {
-    margin-left: 16.666667%;
-  }
+    #conversejs .offset-xl-2 {
+        margin-left: 16.666667%;
+    }
 }
 @media screen and (max-height: 450px) {
   #conversejs {

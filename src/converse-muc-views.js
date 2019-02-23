@@ -1,7 +1,7 @@
 // Converse.js
 // http://conversejs.org
 //
-// Copyright (c) 2013-2018, the Converse.js developers
+// Copyright (c) 2013-2019, the Converse.js developers
 // Licensed under the Mozilla Public License (MPLv2)
 
 import "converse-modal";
@@ -33,9 +33,9 @@ import tpl_spinner from "templates/spinner.html";
 import xss from "xss";
 
 
-const { Backbone, Promise, Strophe, b64_sha1, moment, f, sizzle, _, $build, $iq, $msg, $pres } = converse.env;
+const { Backbone, Promise, Strophe, moment, f, sizzle, _, $build, $iq, $msg, $pres } = converse.env;
 const u = converse.env.utils;
-
+const AFFILIATION_CHANGE_COMANDS = ['admin', 'ban', 'owner', 'member', 'revoke'];
 
 converse.plugins.add('converse-muc-views', {
     /* Dependencies are other plugins which might be
@@ -58,11 +58,14 @@ converse.plugins.add('converse-muc-views', {
 
             renderRoomsPanel () {
                 const { _converse } = this.__super__;
+                if (this.roomspanel && u.isVisible(this.roomspanel.el)) {
+                    return;
+                }
                 this.roomspanel = new _converse.RoomsPanel({
                     'model': new (_converse.RoomsPanelModel.extend({
-                        'id': b64_sha1(`converse.roomspanel${_converse.bare_jid}`), // Required by sessionStorage
+                        'id': `converse.roomspanel${_converse.bare_jid}`, // Required by web storage
                         'browserStorage': new Backbone.BrowserStorage[_converse.config.get('storage')](
-                            b64_sha1(`converse.roomspanel${_converse.bare_jid}`))
+                            `converse.roomspanel${_converse.bare_jid}`)
                     }))()
                 });
                 this.roomspanel.model.fetch();
@@ -99,8 +102,9 @@ converse.plugins.add('converse-muc-views', {
         // configuration settings.
         _converse.api.settings.update({
             'auto_list_rooms': false,
-            'hide_muc_server': false, // TODO: no longer implemented...
             'muc_disable_moderator_commands': false,
+            'muc_show_join_leave': true,
+            'roomconfig_whitelist': [],
             'visible_toolbar_buttons': {
                 'toggle_occupants': true
             }
@@ -237,7 +241,7 @@ converse.plugins.add('converse-muc-views', {
         function toggleRoomInfo (ev) {
             /* Show/hide extra information about a groupchat in a listing. */
             const parent_el = u.ancestor(ev.target, '.room-item'),
-                    div_el = parent_el.querySelector('div.room-info');
+                  div_el = parent_el.querySelector('div.room-info');
             if (div_el) {
                 u.slideIn(div_el).then(u.removeElement)
                 parent_el.querySelector('a.room-info').classList.remove('selected');
@@ -479,9 +483,10 @@ converse.plugins.add('converse-muc-views', {
                     this.model.toJSON(), {
                         '_': _,
                         '__': __,
-                        'topic': u.addHyperlinks(xss.filterXSS(_.get(this.model.get('subject'), 'text'), {'whiteList': {}})),
                         'display_name': __('Groupchat info for %1$s', this.model.getDisplayName()),
-                        'num_occupants': this.model.occupants.length
+                        'features': this.model.features.toJSON(),
+                        'num_occupants': this.model.occupants.length,
+                        'topic': u.addHyperlinks(xss.filterXSS(_.get(this.model.get('subject'), 'text'), {'whiteList': {}}))
                     })
                 );
             }
@@ -546,23 +551,20 @@ converse.plugins.add('converse-muc-views', {
                 this.enterRoom();
             },
 
-            enterRoom (ev) {
+            async enterRoom (ev) {
                 if (ev) { ev.preventDefault(); }
                 if (this.model.get('connection_status') !==  converse.ROOMSTATUS.ENTERED) {
-                    const handler = () => {
-                        if (!u.isPersistableModel(this.model)) {
-                            // Happens during tests, nothing to do if this
-                            // is a hanging chatbox (i.e. not in the collection anymore).
-                            return;
-                        }
-                        this.populateAndJoin();
-                        _converse.emit('chatRoomOpened', this);
+                    await this.model.getRoomFeatures();
+                    if (!u.isPersistableModel(this.model)) {
+                        // XXX: Happens during tests, nothing to do if this
+                        // is a hanging chatbox (i.e. not in the collection anymore).
+                        return;
                     }
-                    this.model.getRoomFeatures().then(handler, handler);
+                    this.populateAndJoin();
                 } else {
                     this.fetchMessages();
-                    _converse.emit('chatRoomOpened', this);
                 }
+                _converse.emit('chatRoomOpened', this);
             },
 
             render () {
@@ -836,6 +838,13 @@ converse.plugins.add('converse-muc-views', {
                 }
             },
 
+            destroy (groupchat, reason, onSuccess, onError) {
+                const destroy = $build("destroy");
+                const iq = $iq({to: groupchat, type: "set"}).c("query", {xmlns: Strophe.NS.MUC_OWNER}).cnode(destroy.node);
+                if (reason && reason.length > 0) { iq.c("reason", reason); }
+                return _converse.api.sendIQ(iq);
+            },
+
             modifyRole (groupchat, nick, role, reason, onSuccess, onError) {
                 const item = $build("item", {nick, role});
                 const iq = $iq({to: groupchat, type: "set"}).c("query", {xmlns: Strophe.NS.MUC_ADMIN}).cnode(item.node);
@@ -871,7 +880,9 @@ converse.plugins.add('converse-muc-views', {
                     );
                     return false;
                 }
-                if (!this.model.occupants.findWhere({'nick': args[0]}) && !this.model.occupants.findWhere({'jid': args[0]})) {
+                if (!(_.includes(AFFILIATION_CHANGE_COMANDS, command) && u.isValidJID(args[0])) &&
+                        !this.model.occupants.findWhere({'nick': args[0]}) &&
+                            !this.model.occupants.findWhere({'jid': args[0]})) {
                     this.showErrorMessage(__('Error: couldn\'t find a groupchat participant "%1$s"', args[0]));
                     return false;
                 }
@@ -884,12 +895,18 @@ converse.plugins.add('converse-muc-views', {
             },
 
             parseMessageForCommands (text) {
-                if (_converse.muc_disable_moderator_commands) {
+                if (_converse.muc_disable_moderator_commands &&
+                        !_.isArray(_converse.muc_disable_moderator_commands)) {
                     return _converse.ChatBoxView.prototype.parseMessageForCommands.apply(this, arguments);
                 }
                 const match = text.replace(/^\s*/, "").match(/^\/(.*?)(?: (.*))?$/) || [false, '', ''],
                       args = match[2] && match[2].splitOnce(' ').filter(s => s) || [],
-                      command = match[1].toLowerCase();
+                      command = match[1].toLowerCase(),
+                      disabled_commands = _.isArray(_converse.muc_disable_moderator_commands) ?
+                        _converse.muc_disable_moderator_commands : [];
+                if (_.includes(disabled_commands, command)) {
+                    return false;
+                }
                 switch (command) {
                     case 'admin':
                         if (!this.verifyAffiliations(['owner']) || !this.validateRoleChangeCommand(command, args)) {
@@ -923,12 +940,21 @@ converse.plugins.add('converse-muc-views', {
                                 this.model.get('jid'), args[0], 'participant', args[1],
                                 undefined, this.onCommandError.bind(this));
                         break;
+                    case 'destroy':
+                        if (!this.verifyAffiliations(['owner'])) {
+                            break;
+                        }
+                        this.destroy(this.model.get('jid'), args[0])
+                            .then(() => this.close())
+                            .catch(e => this.onCommandError(e));
+                        break;
                     case 'help':
-                        this.showHelpMessages([
+                        this.showHelpMessages(_.filter([
                             `<strong>/admin</strong>: ${__("Change user's affiliation to admin")}`,
                             `<strong>/ban</strong>: ${__('Ban user from groupchat')}`,
                             `<strong>/clear</strong>: ${__('Remove messages')}`,
                             `<strong>/deop</strong>: ${__('Change user role to participant')}`,
+                            `<strong>/destroy</strong>: ${__('Remove this groupchat')}`,
                             `<strong>/help</strong>: ${__('Show this menu')}`,
                             `<strong>/kick</strong>: ${__('Kick user from groupchat')}`,
                             `<strong>/me</strong>: ${__('Write in 3rd person')}`,
@@ -942,7 +968,8 @@ converse.plugins.add('converse-muc-views', {
                             `<strong>/subject</strong>: ${__('Set groupchat subject')}`,
                             `<strong>/topic</strong>: ${__('Set groupchat subject (alias for /subject)')}`,
                             `<strong>/voice</strong>: ${__('Allow muted user to post messages')}`
-                        ]);
+                        ], line => (_.every(disabled_commands, element => (!line.startsWith(element+'<', 9))))
+                        ));
                         break;
                     case 'kick':
                         if (!this.verifyRoles(['moderator']) || !this.validateRoleChangeCommand(command, args)) {
@@ -967,10 +994,10 @@ converse.plugins.add('converse-muc-views', {
                         const occupant = this.model.occupants.findWhere({'nick': args[0]}) ||
                                          this.model.occupants.findWhere({'jid': args[0]}),
                               attrs = {
-                                'jid': occupant.get('jid'),
+                                'jid': occupant ? occupant.get('jid') : args[0],
                                 'reason': args[1]
                               };
-                        if (_converse.auto_register_muc_nickname) {
+                        if (_converse.auto_register_muc_nickname && occupant) {
                             attrs['nick'] = occupant.get('nick');
                         }
                         this.model.setAffiliation('member', [attrs])
@@ -1138,7 +1165,12 @@ converse.plugins.add('converse-muc-views', {
                 if (instructions && instructions !== title) {
                     fieldset_el.insertAdjacentHTML('beforeend', `<p class="form-help">${instructions}</p>`);
                 }
-                _.each(fields, field => fieldset_el.insertAdjacentHTML('beforeend', u.xForm2webForm(field, stanza)));
+                _.each(fields, field => {
+                    if (_converse.roomconfig_whitelist.length === 0 ||
+                            _.includes(_converse.roomconfig_whitelist, field.getAttribute('var'))) {
+                        fieldset_el.insertAdjacentHTML('beforeend', u.xForm2webForm(field, stanza));
+                    }
+                });
 
                 // Render save/cancel buttons
                 const last_fieldset_el = document.createElement('fieldset');
@@ -1540,7 +1572,8 @@ converse.plugins.add('converse-muc-views', {
             },
 
             showJoinNotification (occupant) {
-                if (this.model.get('connection_status') !==  converse.ROOMSTATUS.ENTERED) {
+                if (!_converse.muc_show_join_leave ||
+                        this.model.get('connection_status') !==  converse.ROOMSTATUS.ENTERED) {
                     return;
                 }
                 const nick = occupant.get('nick'),
@@ -1593,7 +1626,9 @@ converse.plugins.add('converse-muc-views', {
             },
 
             showLeaveNotification (occupant) {
-                if (_.includes(occupant.get('states'), '303') || _.includes(occupant.get('states'), '307')) {
+                if (!_converse.muc_show_join_leave ||
+                        _.includes(occupant.get('states'), '303') ||
+                        _.includes(occupant.get('states'), '307')) {
                     return;
                 }
                 const nick = occupant.get('nick'),
@@ -1853,14 +1888,9 @@ converse.plugins.add('converse-muc-views', {
                 Backbone.OrderedListView.prototype.initialize.apply(this, arguments);
 
                 this.chatroomview = this.model.chatroomview;
-                this.chatroomview.model.on('change:open', this.renderInviteWidget, this);
                 this.chatroomview.model.on('change:affiliation', this.renderInviteWidget, this);
-                this.chatroomview.model.on('change', () => {
-                    if (_.intersection(converse.ROOM_FEATURES, Object.keys(this.chatroomview.model.changed)).length === 0) {
-                        return;
-                    }
-                    this.renderRoomFeatures();
-                }, this);
+                this.chatroomview.model.features.on('change:open', this.renderInviteWidget, this);
+                this.chatroomview.model.features.on('change', this.renderRoomFeatures, this);
 
                 this.render();
                 this.model.fetch({
@@ -1906,16 +1936,15 @@ converse.plugins.add('converse-muc-views', {
             },
 
             renderRoomFeatures () {
-                const picks = _.pick(this.chatroomview.model.attributes, converse.ROOM_FEATURES),
-                    iteratee = (a, v) => a || v,
-                    el = this.el.querySelector('.chatroom-features');
+                const features = this.chatroomview.model.features,
+                      picks = _.pick(features.attributes, converse.ROOM_FEATURES),
+                      iteratee = (a, v) => a || v;
 
-                el.innerHTML = tpl_chatroom_features(
-                        _.extend(this.chatroomview.model.toJSON(), {
-                            '__': __,
-                            'has_features': _.reduce(_.values(picks), iteratee)
-                        }));
-                this.setOccupantsHeight();
+                if (_.reduce(_.values(picks), iteratee)) {
+                    const el = this.el.querySelector('.chatroom-features');
+                    el.innerHTML = tpl_chatroom_features(_.extend(features.toJSON(), {__}));
+                    this.setOccupantsHeight();
+                }
                 return this;
             },
 
@@ -1949,7 +1978,7 @@ converse.plugins.add('converse-muc-views', {
                       jid = el.value;
                 if (!jid || _.compact(jid.split('@')).length < 2) {
                     evt.target.outerHTML = tpl_chatroom_invite({
-                        'error_message': __('Please enter a valid XMPP username'),
+                        'error_message': __('Please enter a valid XMPP address'),
                         'label_invitation': __('Invite'),
                     });
                     this.initInviteWidget();
@@ -1965,7 +1994,7 @@ converse.plugins.add('converse-muc-views', {
 
             shouldInviteWidgetBeShown () {
                 return _converse.allow_muc_invitations &&
-                    (this.chatroomview.model.get('open') ||
+                    (this.chatroomview.model.features.get('open') ||
                         this.chatroomview.model.get('affiliation') === "owner"
                     );
             },
@@ -2048,7 +2077,15 @@ converse.plugins.add('converse-muc-views', {
             });
         });
 
-        _converse.on('controlboxInitialized', (view) => {
+        _converse.api.listen.on('clearSession', () => {
+            const view = _converse.chatboxviews.get('controlbox');
+            if (view && view.roomspanel) {
+                view.roomspanel.remove();
+                delete view.roomspanel;
+            }
+        });
+
+        _converse.api.listen.on('controlboxInitialized', (view) => {
             if (!_converse.allow_muc) {
                 return;
             }
@@ -2082,6 +2119,40 @@ converse.plugins.add('converse-muc-views', {
              * @memberOf _converse.api
              */
             'roomviews': {
+                /**
+                 * Retrieves a groupchat (aka chatroom) view. The chat should already be open.
+                 *
+                 * @method _converse.api.roomviews.get
+                 * @param {String|string[]} name - e.g. 'coven@conference.shakespeare.lit' or
+                 *  ['coven@conference.shakespeare.lit', 'cave@conference.shakespeare.lit']
+                 * @returns {Backbone.View} Backbone.View representing the groupchat
+                 *
+                 * @example
+                 * // To return a single view, provide the JID of the groupchat
+                 * const view = _converse.api.roomviews.get('coven@conference.shakespeare.lit');
+                 *
+                 * @example
+                 * // To return an array of views, provide an array of JIDs:
+                 * const views = _converse.api.roomviews.get(['coven@conference.shakespeare.lit', 'cave@conference.shakespeare.lit']);
+                 *
+                 * @example
+                 * // To return views of all open groupchats, call the method without any parameters::
+                 * const views = _converse.api.roomviews.get();
+                 *
+                 */
+                get (jids) {
+                    if (_.isArray(jids)) {
+                        const views = _converse.api.chatviews.get(jids);
+                        return views.filter(v => v.model.get('type') === _converse.CHATROOMS_TYPE)
+                    } else {
+                        const view = _converse.api.chatviews.get(jids);
+                        if (view.model.get('type') === _converse.CHATROOMS_TYPE) {
+                            return view;
+                        } else {
+                            return null;
+                        }
+                    }
+                },
                 /**
                  * Lets you close open chatrooms.
                  *

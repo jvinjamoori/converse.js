@@ -1,7 +1,7 @@
 // Converse.js
 // http://conversejs.org
 //
-// Copyright (c) 2013-2018, the Converse.js developers
+// Copyright (c) 2013-2019, the Converse.js developers
 // Licensed under the Mozilla Public License (MPLv2)
 
 /* global libsignal, ArrayBuffer, parseInt, crypto */
@@ -9,7 +9,7 @@
 import converse from "@converse/headless/converse-core";
 import tpl_toolbar_omemo from "templates/toolbar_omemo.html";
 
-const { Backbone, Promise, Strophe, moment, sizzle, $build, $iq, $msg, _, f, b64_sha1 } = converse.env;
+const { Backbone, Promise, Strophe, moment, sizzle, $build, $iq, $msg, _, f } = converse.env;
 const u = converse.env.utils;
 
 Strophe.addNamespace('OMEMO_DEVICELIST', Strophe.NS.OMEMO+".devicelist");
@@ -67,7 +67,7 @@ function parseBundle (bundle_el) {
 converse.plugins.add('converse-omemo', {
 
     enabled (_converse) {
-        return !_.isNil(window.libsignal) && !f.includes('converse-omemo', _converse.blacklisted_plugins);
+        return !_.isNil(window.libsignal) && !f.includes('converse-omemo', _converse.blacklisted_plugins) && _converse.config.get('trusted');
     },
 
     dependencies: ["converse-chatview", "converse-pubsub"],
@@ -446,7 +446,7 @@ converse.plugins.add('converse-omemo', {
             },
 
             renderOMEMOToolbarButton () {
-                if (this.model.get('membersonly') && this.model.get('nonanonymous')) {
+                if (this.model.features.get('membersonly') && this.model.features.get('nonanonymous')) {
                     this.__super__.renderOMEMOToolbarButton.apply(arguments);
                 } else {
                     const icon = this.el.querySelector('.toggle-omemo');
@@ -1137,7 +1137,7 @@ converse.plugins.add('converse-omemo', {
         }
 
         async function onOccupantAdded (chatroom, occupant) {
-            if (occupant.isSelf() || !chatroom.get('nonanonymous') || !chatroom.get('membersonly')) {
+            if (occupant.isSelf() || !chatroom.features.get('nonanonymous') || !chatroom.features.get('membersonly')) {
                 return;
             }
             if (chatroom.get('omemo_active')) {
@@ -1157,7 +1157,7 @@ converse.plugins.add('converse-omemo', {
             let supported;
             if (chatbox.get('type') === _converse.CHATROOMS_TYPE) {
                 await _converse.api.waitUntil('OMEMOInitialized');
-                supported = chatbox.get('nonanonymous') && chatbox.get('membersonly');
+                supported = chatbox.features.get('nonanonymous') && chatbox.features.get('membersonly');
             } else if (chatbox.get('type') === _converse.PRIVATE_CHAT_TYPE) {
                 supported = await _converse.contactHasOMEMOSupport(chatbox.get('jid'));
             }
@@ -1169,8 +1169,7 @@ converse.plugins.add('converse-omemo', {
                 checkOMEMOSupported(chatbox);
                 if (chatbox.get('type') === _converse.CHATROOMS_TYPE) {
                     chatbox.occupants.on('add', o => onOccupantAdded(chatbox, o));
-                    chatbox.on('change:nonanonymous', checkOMEMOSupported);
-                    chatbox.on('change:membersonly', checkOMEMOSupported);
+                    chatbox.features.on('change', () => checkOMEMOSupported(chatbox));
                 }
             })
         );

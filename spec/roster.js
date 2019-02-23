@@ -30,8 +30,36 @@
 
     describe("The Contacts Roster", function () {
 
+        it("is populated once we have registered a presence handler",
+            mock.initConverse(
+                {'_converse': ['emit']}, null, {},
+                async function (done, _converse) {
+
+            const IQs = _converse.connection.IQ_stanzas;
+            await test_utils.waitUntil(() => _converse.emit.calls.all().map(c => c.args[0]).includes('rosterGroupsFetched'));
+            const node = await test_utils.waitUntil(
+                () => _.filter(IQs, iq => iq.nodeTree.querySelector('iq query[xmlns="jabber:iq:roster"]')).pop());
+            expect(_converse.emit.calls.all().map(c => c.args[0]).includes('rosterContactsFetched')).toBeFalsy();
+
+            expect(node.toLocaleString()).toBe(
+                `<iq id="${node.nodeTree.getAttribute('id')}" type="get" xmlns="jabber:client">`+
+                    `<query xmlns="jabber:iq:roster"/>`+
+                `</iq>`);
+            const result = $iq({
+                'to': _converse.connection.jid,
+                'type': 'result',
+                'id': node.nodeTree.getAttribute('id')
+            }).c('query', {
+                'xmlns': 'jabber:iq:roster'
+            }).c('item', {'jid': 'nurse@example.com'}).up()
+              .c('item', {'jid': 'romeo@example.com'})
+            _converse.connection._dataRecv(test_utils.createRequest(result));
+            await test_utils.waitUntil(() => _converse.emit.calls.all().map(c => c.args[0]).includes('rosterContactsFetched'));
+            done();
+        }));
+
         it("supports roster versioning",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched'], {},
                 async function (done, _converse) {
 
@@ -90,7 +118,7 @@
         describe("The live filter", function () {
 
             it("will only appear when roster contacts flow over the visible area",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -136,7 +164,7 @@
             }));
 
             it("can be used to filter the contacts shown",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -202,7 +230,7 @@
             }));
 
             it("will also filter out contacts added afterwards",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -252,7 +280,7 @@
             }));
 
             it("can be used to filter the groups shown",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -308,7 +336,7 @@
             }));
 
             it("has a button with which its contents can be cleared",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -333,7 +361,7 @@
             }));
 
             it("can be used to filter contacts by their chat state",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -374,9 +402,9 @@
         describe("A Roster Group", function () {
 
             it("can be used to organize existing contacts",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
-                    function (done, _converse) {
+                    async function (done, _converse) {
 
                 _converse.roster_groups = true;
                 spyOn(_converse.rosterview, 'update').and.callThrough();
@@ -387,36 +415,34 @@
                 test_utils.createGroupedContacts(_converse);
                 // Check that the groups appear alphabetically and that
                 // requesting and pending contacts are last.
-                test_utils.waitUntil(function () {
-                    return $(_converse.rosterview.el).find('.roster-group:visible a.group-toggle').length;
-                }, 500).then(function () {
-                    var group_titles = $.map(
-                        $(_converse.rosterview.el).find('.roster-group:visible a.group-toggle'),
-                        function (o) { return $(o).text().trim(); }
-                    );
-                    expect(group_titles).toEqual([
-                        "Contact requests",
-                        "colleagues",
-                        "Family",
-                        "friends & acquaintences",
-                        "ænemies",
-                        "Ungrouped",
-                        "Pending contacts"
-                    ]);
-                    // Check that usernames appear alphabetically per group
-                    _.each(_.keys(mock.groups), function (name) {
-                        var $contacts = $(_converse.rosterview.el).find('.roster-group[data-group="'+name+'"] ul');
-                        var names = $.map($contacts, function (o) { return $(o).text().trim(); });
-                        expect(names).toEqual(_.clone(names).sort());
-                    });
-                    done();
+                await test_utils.waitUntil(() => sizzle('.roster-group a.group-toggle', _converse.rosterview.el).length);
+                const group_titles = _.map(
+                    sizzle('.roster-group a.group-toggle', _converse.rosterview.el),
+                    o => o.textContent.trim()
+                );
+                expect(group_titles).toEqual([
+                    "Contact requests",
+                    "colleagues",
+                    "Family",
+                    "friends & acquaintences",
+                    "ænemies",
+                    "Ungrouped",
+                    "Pending contacts"
+                ]);
+                // Check that usernames appear alphabetically per group
+                let names;
+                _.each(_.keys(mock.groups), function (name) {
+                    const contacts = sizzle('.roster-group[data-group="'+name+'"] ul', _converse.rosterview.el);
+                    const names = _.map(contacts, o => o.textContent.trim());
+                    expect(names).toEqual(_.clone(names).sort());
                 });
+                done();
             }));
 
             it("gets created when a contact's \"groups\" attribute changes",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
-                    function (done, _converse) {
+                    async function (done, _converse) {
 
                 _converse.roster_groups = true;
                 spyOn(_converse.rosterview, 'update').and.callThrough();
@@ -434,32 +460,32 @@
 
                 // Check that the groups appear alphabetically and that
                 // requesting and pending contacts are last.
-                test_utils.waitUntil(function () {
-                    return $(_converse.rosterview.el).find('.roster-group:visible a.group-toggle').length;
-                }, 500).then(function () {
-                    var group_titles = $.map(
-                        $(_converse.rosterview.el).find('.roster-group:visible a.group-toggle'),
-                        function (o) { return $(o).text().trim(); }
-                    );
-                    expect(group_titles).toEqual(['firstgroup']);
+                let group_titles = await test_utils.waitUntil(() => {
+                    const toggles = sizzle('.roster-group a.group-toggle', _converse.rosterview.el);
+                    if (_.reduce(toggles, (result, t) => result && u.isVisible(t), true)) {
+                        return _.map(toggles, o => o.textContent.trim());
+                    } else {
+                        return false;
+                    }
+                }, 1000);
+                expect(group_titles).toEqual(['firstgroup']);
 
-                    var contact = _converse.roster.get('groupchanger@localhost');
-                    contact.set({'groups': ['secondgroup']});
-                    return test_utils.waitUntil(function () {
-                        return $(_converse.rosterview.el).find('.roster-group[data-group="secondgroup"]:visible a.group-toggle').length;
-                    }, 500);
-                }).then(function () {
-                    var group_titles = $.map(
-                        $(_converse.rosterview.el).find('.roster-group:visible a.group-toggle'),
-                        function (o) { return $(o).text().trim(); }
-                    );
-                    expect(group_titles).toEqual(['secondgroup']);
-                    done();
-                });
+                const contact = _converse.roster.get('groupchanger@localhost');
+                contact.set({'groups': ['secondgroup']});
+                group_titles = await test_utils.waitUntil(() => {
+                    const toggles = sizzle('.roster-group[data-group="secondgroup"] a.group-toggle', _converse.rosterview.el);
+                    if (_.reduce(toggles, (result, t) => result && u.isVisible(t), true)) {
+                        return _.map(toggles, o => o.textContent.trim());
+                    } else {
+                        return false;
+                    }
+                }, 1000);
+                expect(group_titles).toEqual(['secondgroup']);
+                done();
             }));
 
             it("can share contacts with other roster groups", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -492,7 +518,7 @@
             }));
 
             it("remembers whether it is closed or opened",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     async function (done, _converse) {
 
@@ -537,7 +563,7 @@
             }
 
             it("can be collapsed under their own header", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     async function (done, _converse) {
 
@@ -551,7 +577,7 @@
             }));
 
             it("can be added to the roster",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -568,27 +594,24 @@
             }));
 
             it("are shown in the roster when show_only_online_users", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
-                    function (done, _converse) {
+                    async function (done, _converse) {
 
                 _converse.show_only_online_users = true;
                 test_utils.openControlBox();
                 spyOn(_converse.rosterview, 'update').and.callThrough();
                 _addContacts(_converse);
-                test_utils.waitUntil(function () {
-                    return $(_converse.rosterview.el).find('li:visible').length;
-                }, 700).then(function () {
-                    expect($(_converse.rosterview.el).is(':visible')).toEqual(true);
-                    expect(_converse.rosterview.update).toHaveBeenCalled();
-                    expect($(_converse.rosterview.el).find('li:visible').length).toBe(3);
-                    expect($(_converse.rosterview.el).find('ul.roster-group-contacts:visible').length).toBe(1);
-                    done();
-                });
+                await test_utils.waitUntil(() => _.reduce(_converse.rosterview.el.querySelectorAll('li'), (result, el) => result && u.isVisible(el), true), 500);
+                expect(u.isVisible(_converse.rosterview.el)).toEqual(true);
+                expect(_converse.rosterview.update).toHaveBeenCalled();
+                expect(_converse.rosterview.el.querySelectorAll('li').length).toBe(3);
+                expect(_.filter(_converse.rosterview.el.querySelectorAll('ul.roster-group-contacts'), u.isVisible).length).toBe(1);
+                done();
             }));
 
             it("are shown in the roster when hide_offline_users", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -608,7 +631,7 @@
             }));
 
             it("can be removed by the user", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -648,7 +671,7 @@
             }));
 
             it("do not have a header if there aren't any", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     async function (done, _converse) {
 
@@ -664,9 +687,9 @@
                 spyOn(_converse.connection, 'sendIQ').and.callFake(function (iq, callback) {
                     if (typeof callback === "function") { return callback(); }
                 });
-                await test_utils.waitUntil(function () {
-                    var $pending_contacts = $(_converse.rosterview.get('Pending contacts').el);
-                    return $pending_contacts.is(':visible') && $pending_contacts.find('li:visible').length;
+                await test_utils.waitUntil(() => {
+                    const el = _converse.rosterview.get('Pending contacts').el;
+                    return u.isVisible(el) && _.filter(el.querySelectorAll('li'), li => u.isVisible(li)).length;
                 }, 700)
                             
                 $(_converse.rosterview.el).find(".pending-contact-name:contains('"+name+"')")
@@ -679,7 +702,7 @@
             }));
 
             it("is shown when a new private message is received",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -699,7 +722,7 @@
             }));
 
             it("can be added to the roster and they will be sorted alphabetically",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -730,13 +753,12 @@
         });
 
         describe("Existing Contacts", function () {
-            var _addContacts = function (_converse) {
-                test_utils.createContacts(_converse, 'current')
-                    .openControlBox()
-            };
+            function _addContacts (_converse) {
+                test_utils.createContacts(_converse, 'current').openControlBox()
+            }
 
             it("can be collapsed under their own header", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -752,7 +774,7 @@
             }));
 
             it("will be hidden when appearing under a collapsed group", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -779,7 +801,7 @@
             }));
 
             it("can be added to the roster and they will be sorted alphabetically", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -809,7 +831,7 @@
             }));
 
             it("can be removed by the user", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     async function (done, _converse) {
 
@@ -841,7 +863,7 @@
             }));
 
             it("do not have a header if there aren't any", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     async function (done, _converse) {
 
@@ -871,7 +893,7 @@
             }));
 
             it("can change their status to online and be sorted alphabetically", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -896,7 +918,7 @@
             }));
 
             it("can change their status to busy and be sorted alphabetically", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -923,7 +945,7 @@
             }));
 
             it("can change their status to away and be sorted alphabetically", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -950,7 +972,7 @@
             }));
 
             it("can change their status to xa and be sorted alphabetically", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -977,7 +999,7 @@
             }));
 
             it("can change their status to unavailable and be sorted alphabetically", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -1005,7 +1027,7 @@
             }));
 
             it("are ordered according to status: online, busy, away, xa, unavailable, offline", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -1106,7 +1128,7 @@
         describe("Requesting Contacts", function () {
 
             it("can be added to the roster and they will be sorted alphabetically",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -1142,7 +1164,7 @@
             }));
 
             it("do not have a header if there aren't any", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -1169,7 +1191,7 @@
             }));
 
             it("can be collapsed under their own header", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -1185,7 +1207,7 @@
             }));
 
             it("can have their requests accepted by the user", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     async function (done, _converse) {
 
@@ -1208,7 +1230,7 @@
             }));
 
             it("can have their requests denied by the user", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -1232,7 +1254,7 @@
                 });
             }));
 
-            it("are persisted even if other contacts' change their presence ", mock.initConverseWithPromises(
+            it("are persisted even if other contacts' change their presence ", mock.initConverse(
                 null, ['rosterGroupsFetched'], {}, function (done, _converse) {
 
                 /* This is a regression test.
@@ -1280,7 +1302,7 @@
         describe("All Contacts", function () {
 
             it("are saved to, and can be retrieved from browserStorage",
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 
@@ -1308,7 +1330,7 @@
             }));
 
             it("will show fullname and jid properties on tooltip", 
-                mock.initConverseWithPromises(
+                mock.initConverse(
                     null, ['rosterGroupsFetched'], {},
                     function (done, _converse) {
 

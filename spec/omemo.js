@@ -5,11 +5,13 @@
     const u = converse.env.utils;
 
 
-    function deviceListFetched (_converse, jid) {
-        return _.filter(
+    async function deviceListFetched (_converse, jid) {
+        const stanza = await test_utils.waitUntil(() => _.filter(
             _converse.connection.IQ_stanzas,
             iq => iq.nodeTree.querySelector(`iq[to="${jid}"] items[node="eu.siacs.conversations.axolotl.devicelist"]`)
-        ).pop();
+        ).pop());
+        await test_utils.waitUntil(() => _converse.devicelists.get(jid));
+        return stanza;
     }
 
     function ownDeviceHasBeenPublished (_converse) {
@@ -74,7 +76,7 @@
     describe("The OMEMO module", function() {
 
         it("adds methods for encrypting and decrypting messages via AES GCM",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched', 'chatBoxesFetched'], {},
                 async function (done, _converse) {
 
@@ -91,7 +93,7 @@
 
 
         it("enables encrypted messages to be sent and received",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched', 'chatBoxesFetched'], {},
                 async function (done, _converse) {
 
@@ -115,7 +117,7 @@
             _converse.connection._dataRecv(test_utils.createRequest(stanza));
             await test_utils.waitUntil(() => _converse.omemo_store);
             const devicelist = _converse.devicelists.get({'jid': contact_jid});
-            expect(devicelist.devices.length).toBe(1);
+            await test_utils.waitUntil(() => devicelist.devices.length === 1);
 
             const view = _converse.chatboxviews.get(contact_jid);
             view.model.set('omemo_active', true);
@@ -231,7 +233,7 @@
         }));
 
         it("enables encrypted groupchat messages to be sent and received",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched', 'chatBoxesFetched'], {},
                 async function (done, _converse) {
 
@@ -291,6 +293,7 @@
             await test_utils.waitUntil(() => _converse.omemo_store);
             expect(_converse.devicelists.length).toBe(2);
 
+            await test_utils.waitUntil(() => deviceListFetched(_converse, contact_jid));
             const devicelist = _converse.devicelists.get(contact_jid);
             expect(devicelist.devices.length).toBe(1);
             expect(devicelist.devices.at(0).get('id')).toBe('4e30f35051b7b8b42abe083742187228');
@@ -307,7 +310,8 @@
                 preventDefault: _.noop,
                 keyCode: 13 // Enter
             });
-            iq_stanza = await test_utils.waitUntil(() => bundleFetched(_converse, contact_jid, '4e30f35051b7b8b42abe083742187228'));
+            iq_stanza = await test_utils.waitUntil(() => bundleFetched(_converse, contact_jid, '4e30f35051b7b8b42abe083742187228'), 1000);
+            console.log("Bundle fetched 4e30f35051b7b8b42abe083742187228");
             stanza = $iq({
                 'from': contact_jid,
                 'id': iq_stanza.nodeTree.getAttribute('id'),
@@ -327,7 +331,8 @@
                                 .c('preKeyPublic', {'preKeyId': '3'}).t(btoa('1003'));
             _converse.connection._dataRecv(test_utils.createRequest(stanza));
 
-            iq_stanza = await test_utils.waitUntil(() => bundleFetched(_converse, _converse.bare_jid, '482886413b977930064a5888b92134fe'));
+            iq_stanza = await test_utils.waitUntil(() => bundleFetched(_converse, _converse.bare_jid, '482886413b977930064a5888b92134fe'), 1000);
+            console.log("Bundle fetched 482886413b977930064a5888b92134fe");
             stanza = $iq({
                 'from': _converse.bare_jid,
                 'id': iq_stanza.nodeTree.getAttribute('id'),
@@ -348,7 +353,7 @@
 
             spyOn(_converse.connection, 'send');
             _converse.connection._dataRecv(test_utils.createRequest(stanza));
-            await test_utils.waitUntil(() => _converse.connection.send.calls.count());
+            await test_utils.waitUntil(() => _converse.connection.send.calls.count(), 1000);
             const sent_stanza = _converse.connection.send.calls.all()[0].args[0];
 
             expect(Strophe.serialize(sent_stanza)).toBe(
@@ -372,7 +377,7 @@
         }));
 
         it("gracefully handles auth errors when trying to send encrypted groupchat messages",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched', 'chatBoxesFetched'], {},
                 async function (done, _converse) {
 
@@ -442,6 +447,7 @@
             expect(_converse.devicelists.length).toBe(2);
 
             const devicelist = _converse.devicelists.get(contact_jid);
+            await test_utils.waitUntil(() => deviceListFetched(_converse, contact_jid));
             expect(devicelist.devices.length).toBe(1);
             expect(devicelist.devices.at(0).get('id')).toBe('4e30f35051b7b8b42abe083742187228');
 
@@ -500,7 +506,7 @@
         }));
 
         it("can receive a PreKeySignalMessage",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched', 'chatBoxesFetched'], {},
                 async function (done, _converse) {
 
@@ -601,7 +607,7 @@
 
 
         it("updates device lists based on PEP messages",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched'], {'allow_non_roster_messaging': true},
                 async function (done, _converse) {
 
@@ -765,7 +771,7 @@
 
 
         it("updates device bundles based on PEP messages",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched'], {},
                 async function (done, _converse) {
 
@@ -915,7 +921,7 @@
         }));
 
         it("publishes a bundle with which an encrypted session can be created",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched', 'chatBoxesFetched'], {},
                 async function (done, _converse) {
 
@@ -994,7 +1000,7 @@
 
 
         it("adds a toolbar button for starting an encrypted chat session",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched', 'chatBoxesFetched'], {},
                 async function (done, _converse) {
 
@@ -1159,7 +1165,7 @@
         }));
 
         it("adds a toolbar button for starting an encrypted groupchat session",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched', 'chatBoxesFetched'], {'view_mode': 'fullscreen'},
                 async function (done, _converse) {
 
@@ -1237,6 +1243,7 @@
             await test_utils.waitUntil(() => _converse.omemo_store);
             expect(_converse.devicelists.length).toBe(2);
 
+            await test_utils.waitUntil(() => deviceListFetched(_converse, contact_jid));
             const devicelist = _converse.devicelists.get(contact_jid);
             expect(devicelist.devices.length).toBe(2);
             expect(devicelist.devices.at(0).get('id')).toBe('4e30f35051b7b8b42abe083742187228');
@@ -1252,13 +1259,13 @@
 
             // Test that the button gets disabled when the room becomes
             // anonymous or semi-anonymous
-            view.model.save({'nonanonymous': false, 'semianonymous': true});
+            view.model.features.save({'nonanonymous': false, 'semianonymous': true});
             await test_utils.waitUntil(() => !view.model.get('omemo_supported'));
             toggle = toolbar.querySelector('.toggle-omemo');
             expect(_.isNull(toggle)).toBe(true);
             expect(view.model.get('omemo_supported')).toBe(false);
 
-            view.model.save({'nonanonymous': true, 'semianonymous': false});
+            view.model.features.save({'nonanonymous': true, 'semianonymous': false});
             await test_utils.waitUntil(() => view.model.get('omemo_supported'));
             toggle = toolbar.querySelector('.toggle-omemo');
             expect(_.isNull(toggle)).toBe(false);
@@ -1267,12 +1274,12 @@
             expect(u.hasClass('disabled', toggle)).toBe(false);
 
             // Test that the button gets disabled when the room becomes open
-            view.model.save({'membersonly': false, 'open': true});
+            view.model.features.save({'membersonly': false, 'open': true});
             await test_utils.waitUntil(() => !view.model.get('omemo_supported'));
             toggle = toolbar.querySelector('.toggle-omemo');
             expect(_.isNull(toggle)).toBe(true);
 
-            view.model.save({'membersonly': true, 'open': false});
+            view.model.features.save({'membersonly': true, 'open': false});
             await test_utils.waitUntil(() => view.model.get('omemo_supported'));
             toggle = toolbar.querySelector('.toggle-omemo');
             expect(_.isNull(toggle)).toBe(false);
@@ -1340,7 +1347,7 @@
 
 
         it("shows OMEMO device fingerprints in the user details modal",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched', 'chatBoxesFetched'], {},
                 async function (done, _converse) {
 
@@ -1440,7 +1447,7 @@
     describe("A chatbox with an active OMEMO session", function() {
 
         it("will not show the spoiler toolbar button",
-            mock.initConverseWithPromises(
+            mock.initConverse(
                 null, ['rosterGroupsFetched'], {},
                 function (done, _converse) {
             // TODO

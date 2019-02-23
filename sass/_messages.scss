@@ -68,7 +68,8 @@
         }
 
         &.chat-msg {
-            display: flex;
+            display: inline-flex;
+            width: 100%;
             flex-direction: row;
             overflow: auto; // Ensures that content stays inside
             padding: 0.25rem 1rem;
@@ -118,7 +119,7 @@
                 justify-content: space-between;
                 align-items: stretch;
                 margin-left: 0.5rem;
-                width: 100%;
+                width: calc(100% - var(--message-avatar-width));
             }
             .chat-msg__content--action {
                 margin-left: 0;
@@ -132,9 +133,10 @@
             }
 
             .chat-msg__message {
-                display: flex;
+                display: inline-flex;
                 flex-direction: column;
                 width: 100%;
+                overflow-wrap: break-word;
             }
 
             .chat-msg__edit-modal {
@@ -145,6 +147,11 @@
                 .chat-msg__body {
                     margin-left: 0;
                 }
+            }
+
+            .chat-msg__subject {
+                font-weight: bold;
+                clear: right;
             }
 
             .chat-msg__text {
@@ -169,7 +176,7 @@
                     margin-bottom: -6px;
                 }
             }
-            
+
             .chat-msg__media {
                 margin-top: 0.25rem;
                 word-break: break-all;
@@ -199,10 +206,10 @@
             .chat-msg__avatar {
                 margin-top: 0.5em;
                 vertical-align: middle;
-                height: 36px;
-                width: 36px;
-                min-height: 36px;
-                min-width: 36px;
+                height: var(--message-avatar-height);
+                width: var(--message-avatar-width);
+                min-height: var(--message-avatar-height);
+                min-width: var(--message-avatar-width);
             }
 
             .chat-msg__heading {
@@ -210,7 +217,7 @@
                 margin-top: 0.5em;
                 padding-right: 0.25rem;
                 padding-bottom: 0.25rem;
-                display: block;
+                display: flex;
 
                 .chat-msg__author {
                     overflow: hidden;
@@ -219,13 +226,15 @@
                     font-family: var(--heading-font);
                     font-size: 115%;
                     font-weight: bold;
-                    .badge {
-                        font-size: 80%;
-                        font-family: var(--normal_font);
-                    }
+                    padding-bottom: 1px; // Hack to avoid cutting of text on the button
+                }
+                .badge {
+                    margin-left: 0.5em;
+                    font-family: var(--normal_font);
                 }
                 .chat-msg__time {
                     padding-left: 0.25em;
+                    padding-right: 0.25em;
                     color: var(--text-color-lighten-15-percent);
                 }
             }
@@ -242,6 +251,10 @@
                     margin-top: 0;
                     padding-bottom: 0;
                     width: auto;
+
+                    .fa {
+                        margin-left: 0.5em;
+                    }
                 }
                 .chat-msg__author {
                     font-size: var(--message-font-size);
