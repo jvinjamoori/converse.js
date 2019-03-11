@@ -338,7 +338,7 @@ converse.plugins.add('converse-muc-views', {
                     // For translators: %1$s is a variable and will be
                     // replaced with the XMPP server name
                     available_chatrooms.innerHTML = tpl_rooms_results({
-                        'feedback_text': __('Groupchats found:')
+                        'feedback_text': __('Group Chats Found:')
                     });
                     const fragment = document.createDocumentFragment();
                     const children = _.reject(_.map(this.rooms, this.roomStanzaItemToHTMLElement), _.isNil)
