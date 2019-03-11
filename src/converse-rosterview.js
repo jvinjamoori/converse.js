@@ -623,7 +623,7 @@ converse.plugins.add('converse-rosterview', {
                 const all_contact_views = this.getAll();
                 _.each(this.model.contacts.models, (contact) => {
                     const contact_view = this.get(contact.get('id'));
-                    if (_.includes(contacts, contact)) {
+                    if (_.includes(contacts, contact) || (!_converse.rosterview.filter_view.model.get('filter_text') && contact_view && contact_view.model && contact_view.model.presence.get("show") != 'online')) {
                         u.hideElement(contact_view.el);
                     } else if (contact_view.mayBeShown()) {
                         u.showElement(contact_view.el);
