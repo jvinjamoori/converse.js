@@ -412,7 +412,7 @@ converse.plugins.add('converse-muc-views', {
                 const jid = data.get('chatroom');
                 // this.model.save('muc_domain', Strophe.getDomainFromJid(jid));
                 let newJid = jid.replace(/[\s|\+|=|\*|&|\^|%|\$|#|!|~|`|\?|:|;|@]+/gi, "-");
-                
+
                 return {
                     'jid': newJid,
                     'nick': data.get('nickname')
@@ -444,7 +444,7 @@ converse.plugins.add('converse-muc-views', {
                 let rooms = iq.querySelectorAll('query item');
                 for (let room of rooms) {
                     let name = room.getAttribute('name');
-                    if (name == data.jid) {
+                    if (name == data.jid.toLowerCase()) {
                         roomFound = true;
                     }
                 }
@@ -452,15 +452,15 @@ converse.plugins.add('converse-muc-views', {
                 if (roomFound) {
                     let res = alert(`The room "${data.jid}" already exists, please choose a new name.`);
                 } else {
-                    this.createRoom(data);               
+                    this.createRoom(data);
                 }
-                
+
             },
 
             createRoom (data) {
                 let newRoomAddress = data.jid + '@' + this.model.get('muc_domain');
-                data.jid = newRoomAddress;                
-                _converse.api.rooms.open(newRoomAddress, data); 
+                data.jid = newRoomAddress;
+                _converse.api.rooms.open(newRoomAddress, data);
             }
         });
 
