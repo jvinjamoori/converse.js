@@ -569,6 +569,9 @@ u.xForm2webForm = function (field, stanza, domain) {
             });
         } else if (field.getAttribute('type') === 'fixed') {
             const text = _.get(field.querySelector('value'), 'textContent');
+            if (text === "If a password is required to enter this room, you must specify the password below.") {
+                return "";
+            }
             return '<p class="form-help">'+text+'</p>';
         } else if (field.getAttribute('type') === 'jid-multi') {
             return tpl_form_textarea({
@@ -578,6 +581,9 @@ u.xForm2webForm = function (field, stanza, domain) {
                 'required': !_.isNil(field.querySelector('required'))
             });
         } else if (field.getAttribute('type') === 'boolean') {
+            if (field.getAttribute('label') === "Password Required to Enter Room") {
+                return "";
+            }
             return tpl_form_checkbox({
                 'id': u.getUniqueId(),
                 'name': field.getAttribute('var'),
@@ -600,6 +606,9 @@ u.xForm2webForm = function (field, stanza, domain) {
                 'required': !_.isNil(field.querySelector('required'))
             });
         } else {
+            if (field.getAttribute('type') === 'text-private' && field.getAttribute('label') === "Password") {
+                return "";
+            }
             return tpl_form_input({
                 'id': u.getUniqueId(),
                 'label': field.getAttribute('label') || '',
