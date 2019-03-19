@@ -165,12 +165,22 @@ converse.plugins.add('converse-chatview', {
             },
 
             render () {
+
+                var contact = _converse.roster.get(this.model.vcard.get('jid'));
+                var displayName;
+                var domain = _converse.domain;
+
+                if (contact) {
+                    displayName = contact.get('nickname');
+                }
+
                 this.el.innerHTML = tpl_chatbox_head(
                     _.extend(
                         this.model.vcard.toJSON(),
                         this.model.toJSON(),
                         { '_converse': _converse,
-                          'info_close': __('Close this chat box')
+                          'info_close': __('Close this chat box'),
+                          'chattyname': displayName
                         }
                     )
                 );
