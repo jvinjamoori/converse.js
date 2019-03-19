@@ -117,6 +117,18 @@ converse.plugins.add('converse-message-view', {
                       role = this.model.vcard ? this.model.vcard.get('role') : null,
                       roles = role ? role.split(',') : [];
 
+                var contact = _converse.roster.get(this.model.vcard.get('jid'));
+                var displayName;
+                var domain = _converse.domain;
+                console.log(this.model.vcard.get('jid'));
+
+                if (contact) {
+                    displayName = contact.get('nickname');
+                } else {
+                    displayName = this.model.getDisplayName();
+                    displayName = displayName.replace('@'+domain, '');
+                }
+
                 const msg = u.stringToElement(tpl_message(
                     _.extend(
                         this.model.toJSON(), {
@@ -127,7 +139,7 @@ converse.plugins.add('converse-message-view', {
                         'time': moment_time.format(),
                         'extra_classes': this.getExtraMessageClasses(),
                         'label_show': __('Show more'),
-                        'username': this.model.getDisplayName()
+                        'username': displayName
                     })
                 ));
 
