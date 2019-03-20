@@ -172,6 +172,9 @@ converse.plugins.add('converse-chatview', {
 
                 if (contact) {
                     displayName = contact.get('nickname');
+                } else {
+                    displayName = this.model.getDisplayName();
+                    displayName = displayName.replace('@'+domain, '');
                 }
 
                 this.el.innerHTML = tpl_chatbox_head(
