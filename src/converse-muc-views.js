@@ -1978,9 +1978,14 @@ converse.plugins.add('converse-muc-views', {
                 form.addEventListener('submit', this.inviteFormSubmitted.bind(this), false);
                 const el = this.el.querySelector('input.invited-contact');
                 const list = _converse.roster.map(function (item) {
-                        const label = item.get('fullname') || item.get('jid');
-                        return {'label': label, 'value':item.get('jid')};
-                    });
+                    var contact = _converse.roster.get(item.get('jid'));
+                    var displayName;
+
+                    if (contact) {
+                        displayName = contact.get('nickname');
+                    }
+                    return {'label': displayName, 'value':item.get('jid')};
+                });
                 const awesomplete = new Awesomplete(el, {
                     'minChars': 1,
                     'list': list
