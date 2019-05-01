@@ -341,7 +341,18 @@ converse.plugins.add('converse-minimize', {
                     data.title = this.model.get('name');
                     u.addClass('chat-head-chatroom', this.el);
                 } else {
-                    data.title = this.model.get('fullname');
+                    let contact = _converse.roster.get(this.model.vcard.get('jid'));
+                    let displayName;
+                    let domain = _converse.domain;
+
+                    if (contact) {
+                        displayName = contact.get('nickname');
+                    } else {
+                        displayName = this.model.getDisplayName();
+                        displayName = displayName.replace('@'+domain, '');
+                    }
+
+                    data.title = displayName;
                     u.addClass('chat-head-chatbox', this.el);
                 }
                 this.el.innerHTML = tpl_trimmed_chat(data);
