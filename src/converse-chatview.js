@@ -883,8 +883,8 @@ converse.plugins.add('converse-chatview', {
                     hint_el = this.el.querySelector('form.sendXMPPMessage input.spoiler-hint');
                     spoiler_hint = hint_el.value;
                 }
-                u.addClass('disabled', textarea);
-                textarea.setAttribute('disabled', 'disabled');
+                // u.addClass('disabled', textarea);
+                // textarea.setAttribute('disabled', 'disabled');
                 if (this.parseMessageForCommands(message) ||
                     await this.model.sendMessage(this.model.getOutgoingMessageAttributes(message, spoiler_hint))) {
 
