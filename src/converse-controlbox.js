@@ -231,7 +231,7 @@ converse.plugins.add('converse-controlbox', {
                 this.model.on('change:connected', this.onConnected, this);
                 this.model.on('destroy', this.hide, this);
                 this.model.on('hide', this.hide, this);
-                this.model.on('show', this.show, this);
+                // this.model.on('show', this.show, this);
                 this.model.on('change:closed', this.ensureClosedState, this);
                 this.render();
                 if (this.model.get('connected')) {
