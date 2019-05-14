@@ -1,7 +1,7 @@
 // Converse.js
-// http://conversejs.org
+// https://conversejs.org
 //
-// Copyright (c) 2013-2018, the Converse.js developers
+// Copyright (c) 2013-2019, the Converse.js developers
 // Licensed under the Mozilla Public License (MPLv2)
 
 // This plugin started as a fork of Lea Verou's Awesomplete
@@ -13,14 +13,13 @@ import converse from "@converse/headless/converse-core";
 const { _, Backbone } = converse.env,
       u = converse.env.utils;
 
-
 converse.plugins.add("converse-autocomplete", {
 
     initialize () {
         const { _converse } = this;
 
         _converse.FILTER_CONTAINS = function (text, input) {
-            return RegExp(helpers.regExpEscape(input.trim()), "i").test(text);
+            return RegExp(helpers.regExpEscape(input.trim()), "i").test(text.label) || RegExp(helpers.regExpEscape(input.trim()), "i").test(text.email);
         };
 
         _converse.FILTER_STARTSWITH = function (text, input) {
@@ -39,19 +38,39 @@ converse.plugins.add("converse-autocomplete", {
             const element = document.createElement("li");
             element.setAttribute("aria-selected", "false");
 
-            const regex = new RegExp("("+input+")", "ig");
-            const parts = input ? text.split(regex) : [text];
-            parts.forEach((txt) => {
-                if (input && txt.match(regex)) {
-                    const match = document.createElement("mark");
-                    match.textContent = txt;
-                    element.appendChild(match);
-                } else {
-                    element.appendChild(document.createTextNode(txt));
-                }
-            });
+            const match = document.createElement("span");
+            match.textContent = text;
+            element.appendChild(match);
+
             return element;
         };
+
+
+        class Suggestion extends String {
+
+            constructor (data) {
+                super();
+                const o = Array.isArray(data)
+                    ? { label: data[0], value: data[1] }
+                    : typeof data === "object" && "label" in data && "value" in data ? data : { label: data, value: data, email: data };
+
+                this.label = o.label || o.value;
+                this.value = o.value;
+                this.email = o.email;
+            }
+
+            get lenth () {
+                return this.label.length;
+            }
+
+            toString () {
+                return "" + this.label;
+            }
+
+            valueOf () {
+                return this.toString();
+            }
+        }
 
 
         class AutoComplete {
@@ -65,20 +84,19 @@ converse.plugins.add("converse-autocomplete", {
                     this.container = el.querySelector('.suggestion-box');
                 }
                 this.input = this.container.querySelector('.suggestion-box__input');
-                this.input.setAttribute("autocomplete", "off");
                 this.input.setAttribute("aria-autocomplete", "list");
 
                 this.ul = this.container.querySelector('.suggestion-box__results');
-                this.status = this.container.querySelector('.suggestion-box__additions');
+                // this.status = this.container.querySelector('.suggestion-box__additions');
 
                 _.assignIn(this, {
                     'match_current_word': false, // Match only the current word, otherwise all input is matched
-                    'match_on_tab': false, // Whether matching should only start when tab's pressed
-                    'trigger_on_at': false, // Whether @ should trigger autocomplete
+                    'ac_triggers': [], // Array of keys (`ev.key`) values that will trigger auto-complete
+                    'include_triggers': [], // Array of trigger keys which should be included in the returned value
                     'min_chars': 2,
-                    'max_items': 10,
-                    'auto_evaluate': true,
-                    'auto_first': false,
+                    'max_items': 100,
+                    'auto_evaluate': true, // Should evaluation happen automatically without any particular key as trigger?
+                    'auto_first': false, // Should the first element be automatically selected?
                     'data': _.identity,
                     'filter': _converse.FILTER_CONTAINS,
                     'sort': config.sort === false ? false : SORT_BYLENGTH,
@@ -130,13 +148,14 @@ converse.plugins.add("converse-autocomplete", {
                     list = helpers.getElement(list);
                     if (list && list.children) {
                         const items = [];
-                        slice.apply(list.children).forEach(function (el) {
+                        Array.prototype.slice.apply(list.children).forEach(function (el) {
                             if (!el.disabled) {
                                 const text = el.textContent.trim(),
                                     value = el.value || text,
                                     label = el.label || text;
+                                    email = el.email || text;
                                 if (value !== "") {
-                                    items.push({ label: label, value: value });
+                                    items.push({ label: label, value: value, email: email });
                                 }
                             }
                         });
@@ -190,15 +209,6 @@ converse.plugins.add("converse-autocomplete", {
                 //remove events from the input and its form
                 helpers.unbind(this.input, this._events.input);
                 helpers.unbind(this.input.form, this._events.form);
-
-                //move the input out of the suggestion-box container and remove the container and its children
-                const parentNode = this.container.parentNode;
-
-                parentNode.insertBefore(this.input, this.container);
-                parentNode.removeChild(this.container);
-
-                //remove autocomplete and aria-autocomplete attributes
-                this.input.removeAttribute("autocomplete");
                 this.input.removeAttribute("aria-autocomplete");
             }
 
@@ -231,7 +241,7 @@ converse.plugins.add("converse-autocomplete", {
                 }
             }
 
-            select (selected, origin) {
+            select (selected) {
                 if (selected) {
                     this.index = u.siblingIndex(selected);
                 } else {
@@ -291,20 +301,26 @@ converse.plugins.add("converse-autocomplete", {
                         , ev.keyCode)) {
                     return;
                 }
-                if (this.match_on_tab && ev.keyCode === _converse.keycodes.TAB) {
-                    ev.preventDefault();
+
+                if (this.ac_triggers.includes(ev.key)) {
+                    if (ev.key === "Tab") {
+                        ev.preventDefault();
+                    }
                     this.auto_completing = true;
-                } else if (this.trigger_on_at && ev.keyCode === _converse.keycodes.AT) {
-                    this.auto_completing = true;
+                } else if (ev.key === "Backspace") {
+                    const word = u.getCurrentWord(ev.target, ev.target.selectionEnd-1);
+                    if (this.ac_triggers.includes(word[0])) {
+                        this.auto_completing = true;
+                    }
                 }
             }
 
             evaluate (ev) {
-                const arrow_pressed = (
+                const selecting = this.selected && ev && (
                     ev.keyCode === _converse.keycodes.UP_ARROW ||
                     ev.keyCode === _converse.keycodes.DOWN_ARROW
                 );
-                if (!this.auto_completing || (this.selected && arrow_pressed)) {
+                if (!this.auto_evaluate && !this.auto_completing || selecting) {
                     return;
                 }
 
@@ -316,7 +332,7 @@ converse.plugins.add("converse-autocomplete", {
                 let value = this.match_current_word ? u.getCurrentWord(this.input) : this.input.value;
 
                 let ignore_min_chars = false;
-                if (this.trigger_on_at && value.startsWith('@')) {
+                if (this.ac_triggers.includes(value[0]) && !this.include_triggers.includes(ev.key)) {
                     ignore_min_chars = true;
                     value = value.slice('1');
                 }
@@ -334,7 +350,7 @@ converse.plugins.add("converse-autocomplete", {
                         this.suggestions = this.suggestions.sort(this.sort);
                     }
                     this.suggestions = this.suggestions.slice(0, this.max_items);
-                    this.suggestions.forEach((text) => this.ul.appendChild(this.item(text, value)));
+                    this.suggestions.forEach(text => this.ul.appendChild(this.item(text, value)));
 
                     if (this.ul.children.length === 0) {
                         this.close({'reason': 'nomatches'});
@@ -349,30 +365,8 @@ converse.plugins.add("converse-autocomplete", {
         }
 
         // Make it an event emitter
-        _.extend(AutoComplete.prototype, Backbone.Events);
+        Object.assign(AutoComplete.prototype, Backbone.Events);
 
-
-        // Private functions
-
-        function Suggestion(data) {
-            const o = Array.isArray(data)
-                ? { label: data[0], value: data[1] }
-                : typeof data === "object" && "label" in data && "value" in data ? data : { label: data, value: data };
-
-            this.label = o.label || o.value;
-            this.value = o.value;
-        }
-
-        Object.defineProperty(Suggestion.prototype = Object.create(String.prototype), "length", {
-            get: function() { return this.label.length; }
-        });
-
-        Suggestion.prototype.toString = Suggestion.prototype.valueOf = function () {
-            return "" + this.label;
-        };
-
-        // Helpers
-        var slice = Array.prototype.slice;
 
         const helpers = {
 

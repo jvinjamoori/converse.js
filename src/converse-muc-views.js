@@ -1854,7 +1854,7 @@ converse.plugins.add('converse-muc-views', {
 
                 this.chatroomview = this.model.chatroomview;
                 this.chatroomview.model.on('change:open', this.renderInviteWidget, this);
-                this.chatroomview.model.on('change:affiliation', this.renderInviteWidget, this);
+                // this.chatroomview.model.on('change:affiliation', this.renderInviteWidget, this);
                 this.chatroomview.model.on('change', () => {
                     if (_.intersection(converse.ROOM_FEATURES, Object.keys(this.chatroomview.model.changed)).length === 0) {
                         return;
@@ -1935,12 +1935,13 @@ converse.plugins.add('converse-muc-views', {
                 if (reason !== null) {
                     this.chatroomview.model.directInvite(suggestion.text.value, reason);
                 }
-                const form = suggestion.target.form,
-                      error = form.querySelector('.pure-form-message.error');
-                if (!_.isNull(error)) {
-                    error.parentNode.removeChild(error);
-                }
-                suggestion.target.value = '';
+                // const form = suggestion.target.form,
+                //       error = form.querySelector('.pure-form-message.error');
+                // if (!_.isNull(error)) {
+                //     error.parentNode.removeChild(error);
+                // }
+                const input = this.el.querySelector('input.invited-contact');
+                input.value = '';
             },
 
             inviteFormSubmitted (evt) {
@@ -1971,12 +1972,12 @@ converse.plugins.add('converse-muc-views', {
             },
 
             initInviteWidget () {
-                const form = this.el.querySelector('form.room-invite');
+                const form = this.el.querySelector('.room-invite form');
                 if (_.isNull(form)) {
                     return;
                 }
                 form.addEventListener('submit', this.inviteFormSubmitted.bind(this), false);
-                const el = this.el.querySelector('input.invited-contact');
+                // const el = this.el.querySelector('input.invited-contact');
                 const list = _converse.roster.map(function (item) {
                     var contact = _converse.roster.get(item.get('jid'));
                     var displayName;
@@ -1984,14 +1985,22 @@ converse.plugins.add('converse-muc-views', {
                     if (contact) {
                         displayName = contact.get('nickname');
                     }
-                    return {'label': displayName, 'value':item.get('jid')};
+                    return {'label': displayName, 'value':item.get('jid'), email: item.get('email')};
                 });
-                const awesomplete = new Awesomplete(el, {
-                    'minChars': 1,
+                const el = this.el.querySelector('.suggestion-box').parentElement;
+
+                if (this.invite_auto_complete) {
+                    this.invite_auto_complete.destroy();
+                }
+                this.invite_auto_complete = new _converse.AutoComplete(el, {
+                    'min_chars': 1,
                     'list': list
                 });
-                el.addEventListener('awesomplete-selectcomplete',
-                    this.promptForInvite.bind(this));
+                this.invite_auto_complete.on('suggestion-box-selectcomplete', ev => this.promptForInvite(ev));
+                this.invite_auto_complete.ul.setAttribute(
+                    'style',
+                    `max-height: 280px;`
+                );
             }
         });
 
