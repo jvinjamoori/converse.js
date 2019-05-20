@@ -414,10 +414,8 @@ converse.plugins.add('converse-roster', {
                 if (collection.length === 0 ||
                         (this.rosterVersioningSupported() && !_converse.session.get('roster_fetched'))) {
                     _converse.send_initial_presence = true;
-                    _converse.roster.fetchFromServer();
-                } else {
-                    _converse.emit('cachedRoster', collection);
                 }
+                _converse.roster.fetchFromServer();
             },
 
             subscribeToSuggestedItems (msg) {
@@ -538,7 +536,7 @@ converse.plugins.add('converse-roster', {
                 const from = iq.getAttribute('from');
                 if (from && from !== _converse.bare_jid) {
                     // https://tools.ietf.org/html/rfc6121#page-15
-                    // 
+                    //
                     // A receiving client MUST ignore the stanza unless it has no 'from'
                     // attribute (i.e., implicitly from the bare JID of the user's
                     // account) or it has a 'from' attribute whose value matches the
@@ -859,7 +857,7 @@ converse.plugins.add('converse-roster', {
         _converse.api.listen.on('statusInitialized', (reconnecting) => {
             if (!reconnecting) {
                 _converse.presences = new _converse.Presences();
-                _converse.presences.browserStorage = 
+                _converse.presences.browserStorage =
                     new Backbone.BrowserStorage.session(b64_sha1(`converse.presences-${_converse.bare_jid}`));
                 _converse.presences.fetch();
             }
@@ -894,7 +892,7 @@ converse.plugins.add('converse-roster', {
             'contacts': {
                 /**
                  * This method is used to retrieve roster contacts.
-                 * 
+                 *
                  * @method _converse.api.contacts.get
                  * @params {(string[]|string)} jid|jids The JID or JIDs of
                  *      the contacts to be returned.
@@ -907,7 +905,7 @@ converse.plugins.add('converse-roster', {
                  *     const contact = _converse.api.contacts.get('buddy@example.com')
                  *     // ...
                  * });
-                 * 
+                 *
                  * @example
                  * // To get multiple contacts, pass in an array of JIDs:
                  * _converse.api.listen.on('rosterContactsFetched', function () {
@@ -916,7 +914,7 @@ converse.plugins.add('converse-roster', {
                  *     )
                  *     // ...
                  * });
-                 * 
+                 *
                  * @example
                  * // To return all contacts, simply call ``get`` without any parameters:
                  * _converse.api.listen.on('rosterContactsFetched', function () {
@@ -937,7 +935,7 @@ converse.plugins.add('converse-roster', {
                 },
                 /**
                  * Add a contact.
-                 * 
+                 *
                  * @method _converse.api.contacts.add
                  * @param {string} jid The JID of the contact to be added
                  * @param {string} [name] A custom name to show the user by

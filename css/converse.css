@@ -12236,4 +12236,20 @@ body.reset {
       #conversejs.converse-embedded .chatroom .box-flyout .occupants .occupant-list li.occupant {
         font-size: 120%; }
 
+.invisible-block {
+  display: none !important; }
+
+.note-block {
+  font-style: italic !important;
+  font-size: small !important;
+  color: #888 !important; }
+
+#conversejs #converse-roster {
+  margin-top: 0.75em !important; }
+
+.empty-contact,
+.empty-search-result {
+  text-align: center;
+  padding: 10px !important; }
+
 /*# sourceMappingURL=converse.css.map */

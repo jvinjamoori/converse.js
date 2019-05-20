@@ -340,6 +340,8 @@ converse.plugins.add('converse-rosterview', {
                 const roster_filter = this.el.querySelector('.roster-filter');
                 roster_filter.value = '';
                 this.model.save({'filter_text': ''});
+                let rosterGroupView = new _converse.RosterGroupView();
+                rosterGroupView.filterOutContacts();
             }
         });
 
@@ -621,20 +623,42 @@ converse.plugins.add('converse-rosterview', {
                  */
                 let shown = 0;
                 const all_contact_views = this.getAll();
-                _.each(this.model.contacts.models, (contact) => {
+
+                _.each(this.model.contacts.models, contact => {
                     const contact_view = this.get(contact.get('id'));
-                    if (_.includes(contacts, contact) || (!_converse.rosterview.filter_view.model.get('filter_text') && contact_view && contact_view.model && contact_view.model.presence.get("show") != 'online')) {
-                        u.hideElement(contact_view.el);
-                    } else if (contact_view.mayBeShown()) {
-                        u.showElement(contact_view.el);
-                        shown += 1;
+
+                    if (!_converse.rosterview.filter_view.model.get('filter_text')) {
+                        if (contact.get('recent')) {
+                            u.showElement(contact_view.el);
+                            shown += 1;
+                        } else {
+                            u.hideElement(contact_view.el);
+                        }
+                    } else if (_converse.rosterview.filter_view.model.get('filter_text')) {
+                        if (_.includes(contacts, contact) || (!_converse.rosterview.filter_view.model.get('filter_text') && contact_view && contact_view.model && contact_view.model.presence.get("show") != 'online')) {
+                            u.hideElement(contact_view.el);
+                        } else if (contact_view.mayBeShown()) {
+                            u.showElement(contact_view.el);
+                            shown += 1;
+                        }
                     }
                 });
+
                 if (shown) {
                     u.showElement(this.el);
                 } else {
                     u.hideElement(this.el);
                 }
+
+                u.hideElement(_converse.empty_contact);
+                u.hideElement(_converse.empty_search_result);
+
+                if (!shown && !_converse.rosterview.filter_view.model.get('filter_text')) {
+                    u.showElement(_converse.empty_contact);
+                } else if (!shown && _converse.rosterview.filter_view.model.get('filter_text')) {
+                    u.showElement(_converse.empty_search_result);
+                }
+
             },
 
             getFilterMatches (q, type) {
@@ -800,6 +824,8 @@ converse.plugins.add('converse-rosterview', {
                 const form = this.el.querySelector('.roster-filter-form');
                 this.el.replaceChild(this.filter_view.render().el, form);
                 this.roster_el = this.el.querySelector('.roster-contacts');
+                _converse.empty_contact = this.el.querySelector('.empty-contact');
+                _converse.empty_search_result = this.el.querySelector('.empty-search-result');
                 return this;
             },
 
