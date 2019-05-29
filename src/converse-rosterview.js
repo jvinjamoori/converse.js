@@ -787,7 +787,7 @@ converse.plugins.add('converse-rosterview', {
             initialize () {
                 Backbone.OrderedListView.prototype.initialize.apply(this, arguments);
 
-                _converse.roster.on("add", this.onContactAdded, this);
+                // _converse.roster.on("add", this.onContactAdded, this);
                 _converse.roster.on('change:groups', this.onContactAdded, this);
                 _converse.roster.on('change', this.onContactChange, this);
                 _converse.roster.on("destroy", this.update, this);
