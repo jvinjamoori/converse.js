@@ -280,7 +280,15 @@ converse.plugins.add('converse-rosterview', {
                 }
             },
 
-            liveFilter: _.debounce(function (ev) {
+            liveFilter (ev) {
+                if (ev.keyCode == 13){
+                    ev.preventDefault();
+                }
+                this.liveFilterOrig(ev);
+                return false;
+            },
+
+            liveFilterOrig: _.debounce(function (ev) {
                 this.model.save({
                     'filter_text': this.el.querySelector('.roster-filter').value
                 });
