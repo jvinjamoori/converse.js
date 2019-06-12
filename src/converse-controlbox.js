@@ -561,7 +561,7 @@ converse.plugins.add('converse-controlbox', {
                 // artifacts (i.e. on page load the toggle is shown only to then
                 // seconds later be hidden in favor of the controlbox).
                 this.el.innerHTML = tpl_controlbox_toggle({
-                    'label_toggle': _converse.connection.connected ? __('Chat') : __('Toggle chat')
+                    'label_toggle': _converse.connection.connected ? __('Chat') : __('Loading...')
                 })
                 return this;
             },

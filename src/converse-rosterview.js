@@ -131,11 +131,12 @@ converse.plugins.add('converse-rosterview', {
                 const label_nickname = _converse.xhr_user_search_url ? __('Contact name') : __('Optional nickname');
                 return  tpl_add_contact_modal(_.extend(this.model.toJSON(), {
                     '_converse': _converse,
-                    'heading_new_contact': __('Add a Contact'),
+                    'heading_new_contact': __('Search contact'),
                     'label_xmpp_address': __('XMPP Address'),
                     'label_nickname': label_nickname,
                     'contact_placeholder': __('name@example.org'),
-                    'label_add': __('Add'),
+                    'label_add': __('Start Conversation'),
+                    'nickname_placeholder': __('Search by name and email'),
                     'error_message': __('Please enter a valid XMPP address')
                 }));
             },
@@ -826,7 +827,7 @@ converse.plugins.add('converse-rosterview', {
                 this.el.innerHTML = tpl_roster({
                     'allow_contact_requests': _converse.allow_contact_requests,
                     'heading_contacts': __('Contacts'),
-                    'title_add_contact': __('Add a contact'),
+                    'title_add_contact': __('Search contact'),
                     'title_sync_contacts': __('Re-sync your contacts')
                 });
                 const form = this.el.querySelector('.roster-filter-form');
